@@ -1,22 +1,31 @@
-//
-//  SceneDelegate.swift
-//  ToDo
-//
-//  Created by Егор Партенко on 17.3.25..
-//
-
 import UIKit
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
 
-
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         // Use this method to optionally configure and attach the UIWindow `window` to the provided UIWindowScene `scene`.
         // If using a storyboard, the `window` property will automatically be initialized and attached to the scene.
         // This delegate does not imply the connecting scene or session are new (see `application:configurationForConnectingSceneSession` instead).
-        guard let _ = (scene as? UIWindowScene) else { return }
+        guard let windowScene = (scene as? UIWindowScene) else { return }
+        
+        // Создаем окно
+        window = UIWindow(windowScene: windowScene)
+        
+        // Создаем корневой контроллер с помощью модульного билдера TaskList
+        let taskListViewController = TaskListModuleBuilder.build()
+        
+        // Оборачиваем в навигационный контроллер
+        let navigationController = UINavigationController(rootViewController: taskListViewController)
+        navigationController.navigationBar.isHidden = true // Скрываем навбар, так как в дизайне его нет
+        
+        // Настраиваем внешний вид системных элементов
+        configureAppearance()
+        
+        // Устанавливаем корневой контроллер
+        window?.rootViewController = navigationController
+        window?.makeKeyAndVisible()
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {
@@ -45,11 +54,32 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Called as the scene transitions from the foreground to the background.
         // Use this method to save data, release shared resources, and store enough scene-specific state information
         // to restore the scene back to its current state.
-
-        // Save changes in the application's managed object context when the application transitions to the background.
-        (UIApplication.shared.delegate as? AppDelegate)?.saveContext()
+        
+        // Сохраняем контекст Core Data при уходе в фон
+        CoreDataStack.shared.saveContext()
     }
-
-
-}
-
+    
+    // MARK: - UI Appearance Configuration
+    private func configureAppearance() {
+        // Настройка внешнего вида UINavigationBar
+        if #available(iOS 15.0, *) {
+            let appearance = UINavigationBarAppearance()
+            appearance.configureWithOpaqueBackground()
+            appearance.backgroundColor = .black
+            appearance.titleTextAttributes = [.foregroundColor: UIColor.white]
+            
+            UINavigationBar.appearance().standardAppearance = appearance
+            UINavigationBar.appearance().scrollEdgeAppearance = appearance
+            UINavigationBar.appearance().compactAppearance = appearance
+        } else {
+            UINavigationBar.appearance().barTintColor = .black
+            UINavigationBar.appearance().tintColor = .white
+            UINavigationBar.appearance().titleTextAttributes = [.foregroundColor: UIColor.white]
+            UINavigationBar.appearance().isTranslucent = false
+        }
+        
+        // Настройка внешнего вида UITabBar если понадобится
+        UITabBar.appearance().barTintColor = .black
+        UITabBar.appearance().tintColor = .white
+    }
+} 

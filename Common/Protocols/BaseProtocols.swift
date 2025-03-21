@@ -1,10 +1,37 @@
 import UIKit
 
-// MARK: - BaseView
+// MARK: - Base VIPER Protocols
+
+/// Базовый протокол для всех Entity в архитектуре VIPER
+protocol BaseEntityInterface: AnyObject {
+}
+
+/// Базовый протокол для всех Interactor в архитектуре VIPER
+protocol BaseInteractorInterface: AnyObject {
+    /// Вызывается при инициализации интерактора
+    func initialize()
+}
+
+/// Базовый протокол для всех Presenter в архитектуре VIPER
+protocol BasePresenterInterface: AnyObject {
+    /// Вызывается при загрузке view
+    func viewDidLoad()
+    
+    /// Вызывается перед появлением view
+    func viewWillAppear()
+    
+    /// Вызывается после появления view
+    func viewDidAppear()
+    
+    /// Вызывается перед исчезновением view
+    func viewWillDisappear()
+    
+    /// Вызывается при получении ошибки
+    func didReceiveError(_ error: Error)
+}
+
 /// Базовый протокол для всех View в архитектуре VIPER
 protocol BaseViewInterface: AnyObject {
-    var presenter: BasePresenterInterface? { get set }
-    
     /// Отображение индикатора загрузки
     func showLoading()
     
@@ -18,10 +45,46 @@ protocol BaseViewInterface: AnyObject {
     func showMessage(_ message: String)
 }
 
-// По умолчанию реализуем методы для UIViewController
+/// Базовый протокол для всех Router в архитектуре VIPER
+protocol BaseRouterInterface: AnyObject {
+    /// Корневой контроллер для навигации
+    var viewController: UIViewController? { get set }
+    
+    /// Базовая навигация назад
+    func popViewController(animated: Bool)
+    
+    /// Закрытие текущего модального контроллера
+    func dismiss(animated: Bool)
+    
+    /// Переход к корневому контроллеру стека навигации
+    func popToRoot(animated: Bool)
+}
+
+/// Базовый протокол для создателей модулей
+protocol ModuleBuilderInterface {
+    /// Создает модуль и возвращает ViewController
+    static func build() -> UIViewController
+    
+    /// Создает модуль и возвращает ViewController, принимая параметры
+    static func build(with parameters: [String: Any]) -> UIViewController
+}
+
+// MARK: - Реализации по умолчанию
+
+extension BaseInteractorInterface {
+    func initialize() {}
+}
+
+extension BasePresenterInterface {
+    func viewDidLoad() {}
+    func viewWillAppear() {}
+    func viewDidAppear() {}
+    func viewWillDisappear() {}
+    func didReceiveError(_ error: Error) {}
+}
+
 extension BaseViewInterface where Self: UIViewController {
     func showLoading() {
-        // Здесь можно добавить стандартный индикатор загрузки
         let activityIndicator = UIActivityIndicatorView(style: .large)
         activityIndicator.center = view.center
         activityIndicator.tag = 999
@@ -31,7 +94,6 @@ extension BaseViewInterface where Self: UIViewController {
     }
     
     func hideLoading() {
-        // Удаление индикатора загрузки
         if let activityIndicator = view.viewWithTag(999) as? UIActivityIndicatorView {
             activityIndicator.stopAnimating()
             activityIndicator.removeFromSuperview()
@@ -52,61 +114,6 @@ extension BaseViewInterface where Self: UIViewController {
     }
 }
 
-// MARK: - BasePresenter
-/// Базовый протокол для всех Presenter в архитектуре VIPER
-protocol BasePresenterInterface: AnyObject {
-    /// Вызывается при загрузке view
-    func viewDidLoad()
-    
-    /// Вызывается перед появлением view
-    func viewWillAppear()
-    
-    /// Вызывается после появления view
-    func viewDidAppear()
-    
-    /// Вызывается перед исчезновением view
-    func viewWillDisappear()
-    
-    /// Вызывается при получении ошибки
-    func didReceiveError(_ error: Error)
-}
-
-// Реализация по умолчанию
-extension BasePresenterInterface {
-    func viewDidLoad() {}
-    func viewWillAppear() {}
-    func viewDidAppear() {}
-    func viewWillDisappear() {}
-    func didReceiveError(_ error: Error) {}
-}
-
-// MARK: - BaseInteractor
-/// Базовый протокол для всех Interactor в архитектуре VIPER
-protocol BaseInteractorInterface: AnyObject {
-    /// Вызывается при инициализации интерактора
-    func initialize()
-}
-
-extension BaseInteractorInterface {
-    func initialize() {}
-}
-
-// MARK: - BaseRouter
-/// Базовый протокол для всех Router в архитектуре VIPER
-protocol BaseRouterInterface: AnyObject {
-    /// Корневой контроллер для навигации
-    var viewController: UIViewController? { get set }
-    
-    /// Базовая навигация назад
-    func popViewController(animated: Bool)
-    
-    /// Закрытие текущего модального контроллера
-    func dismiss(animated: Bool)
-    
-    /// Переход к корневому контроллеру стека навигации
-    func popToRoot(animated: Bool)
-}
-
 extension BaseRouterInterface {
     func popViewController(animated: Bool = true) {
         if let navigationController = viewController?.navigationController {
@@ -123,16 +130,6 @@ extension BaseRouterInterface {
             navigationController.popToRootViewController(animated: animated)
         }
     }
-}
-
-// MARK: - ModuleBuilder
-/// Базовый протокол для создателей модулей
-protocol ModuleBuilderInterface {
-    /// Создает модуль и возвращает ViewController
-    static func build() -> UIViewController
-    
-    /// Создает модуль и возвращает ViewController, принимая параметры
-    static func build(with parameters: [String: Any]) -> UIViewController
 }
 
 extension ModuleBuilderInterface {

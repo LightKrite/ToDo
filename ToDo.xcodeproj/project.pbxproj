@@ -11,6 +11,16 @@
 		D2B65C882D8C69C200762231 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B65C852D8C69C200762231 /* NetworkService.swift */; };
 		D2B65C892D8C69C200762231 /* CoreDataStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B65C832D8C69C200762231 /* CoreDataStack.swift */; };
 		D2B65C8A2D8C69C200762231 /* DataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B65C842D8C69C200762231 /* DataManager.swift */; };
+		D2B65CB62D8DA67F00762231 /* TaskListPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B65CAC2D8DA67F00762231 /* TaskListPresenter.swift */; };
+		D2B65CB72D8DA67F00762231 /* TaskListInteractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B65CAA2D8DA67F00762231 /* TaskListInteractor.swift */; };
+		D2B65CB82D8DA67F00762231 /* TaskListModuleBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B65CA82D8DA67F00762231 /* TaskListModuleBuilder.swift */; };
+		D2B65CB92D8DA67F00762231 /* TaskListViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B65CB12D8DA67F00762231 /* TaskListViewController.swift */; };
+		D2B65CBA2D8DA67F00762231 /* TasksFooterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B65CB22D8DA67F00762231 /* TasksFooterView.swift */; };
+		D2B65CBB2D8DA67F00762231 /* TaskListRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B65CAE2D8DA67F00762231 /* TaskListRouter.swift */; };
+		D2B65CBC2D8DA67F00762231 /* TaskCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B65CB02D8DA67F00762231 /* TaskCell.swift */; };
+		D2B65CCA2D8DA81700762231 /* TaskModuleProtocols.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B65CC72D8DA81700762231 /* TaskModuleProtocols.swift */; };
+		D2B65CCB2D8DA81700762231 /* Errors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B65CC62D8DA81700762231 /* Errors.swift */; };
+		D2B65CCC2D8DA81700762231 /* BaseProtocols.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2B65CC52D8DA81700762231 /* BaseProtocols.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -35,6 +45,16 @@
 		D2B65C832D8C69C200762231 /* CoreDataStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreDataStack.swift; sourceTree = "<group>"; };
 		D2B65C842D8C69C200762231 /* DataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataManager.swift; sourceTree = "<group>"; };
 		D2B65C852D8C69C200762231 /* NetworkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkService.swift; sourceTree = "<group>"; };
+		D2B65CA82D8DA67F00762231 /* TaskListModuleBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskListModuleBuilder.swift; sourceTree = "<group>"; };
+		D2B65CAA2D8DA67F00762231 /* TaskListInteractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskListInteractor.swift; sourceTree = "<group>"; };
+		D2B65CAC2D8DA67F00762231 /* TaskListPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskListPresenter.swift; sourceTree = "<group>"; };
+		D2B65CAE2D8DA67F00762231 /* TaskListRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskListRouter.swift; sourceTree = "<group>"; };
+		D2B65CB02D8DA67F00762231 /* TaskCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskCell.swift; sourceTree = "<group>"; };
+		D2B65CB12D8DA67F00762231 /* TaskListViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskListViewController.swift; sourceTree = "<group>"; };
+		D2B65CB22D8DA67F00762231 /* TasksFooterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksFooterView.swift; sourceTree = "<group>"; };
+		D2B65CC52D8DA81700762231 /* BaseProtocols.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseProtocols.swift; sourceTree = "<group>"; };
+		D2B65CC62D8DA81700762231 /* Errors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Errors.swift; sourceTree = "<group>"; };
+		D2B65CC72D8DA81700762231 /* TaskModuleProtocols.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskModuleProtocols.swift; sourceTree = "<group>"; };
 		D2F6CDCB2D88776000E5F5AB /* ToDo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ToDo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D2F6CDE42D88776200E5F5AB /* ToDoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ToDoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D2F6CDEE2D88776200E5F5AB /* ToDoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ToDoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -114,9 +134,91 @@
 			path = Services;
 			sourceTree = "<group>";
 		};
+		D2B65CA92D8DA67F00762231 /* Builder */ = {
+			isa = PBXGroup;
+			children = (
+				D2B65CA82D8DA67F00762231 /* TaskListModuleBuilder.swift */,
+			);
+			path = Builder;
+			sourceTree = "<group>";
+		};
+		D2B65CAB2D8DA67F00762231 /* Interactor */ = {
+			isa = PBXGroup;
+			children = (
+				D2B65CAA2D8DA67F00762231 /* TaskListInteractor.swift */,
+			);
+			path = Interactor;
+			sourceTree = "<group>";
+		};
+		D2B65CAD2D8DA67F00762231 /* Presenter */ = {
+			isa = PBXGroup;
+			children = (
+				D2B65CAC2D8DA67F00762231 /* TaskListPresenter.swift */,
+			);
+			path = Presenter;
+			sourceTree = "<group>";
+		};
+		D2B65CAF2D8DA67F00762231 /* Router */ = {
+			isa = PBXGroup;
+			children = (
+				D2B65CAE2D8DA67F00762231 /* TaskListRouter.swift */,
+			);
+			path = Router;
+			sourceTree = "<group>";
+		};
+		D2B65CB32D8DA67F00762231 /* View */ = {
+			isa = PBXGroup;
+			children = (
+				D2B65CB02D8DA67F00762231 /* TaskCell.swift */,
+				D2B65CB12D8DA67F00762231 /* TaskListViewController.swift */,
+				D2B65CB22D8DA67F00762231 /* TasksFooterView.swift */,
+			);
+			path = View;
+			sourceTree = "<group>";
+		};
+		D2B65CB42D8DA67F00762231 /* TaskList */ = {
+			isa = PBXGroup;
+			children = (
+				D2B65CA92D8DA67F00762231 /* Builder */,
+				D2B65CAB2D8DA67F00762231 /* Interactor */,
+				D2B65CAD2D8DA67F00762231 /* Presenter */,
+				D2B65CAF2D8DA67F00762231 /* Router */,
+				D2B65CB32D8DA67F00762231 /* View */,
+			);
+			path = TaskList;
+			sourceTree = "<group>";
+		};
+		D2B65CB52D8DA67F00762231 /* Modules */ = {
+			isa = PBXGroup;
+			children = (
+				D2B65CB42D8DA67F00762231 /* TaskList */,
+			);
+			path = Modules;
+			sourceTree = "<group>";
+		};
+		D2B65CC82D8DA81700762231 /* Protocols */ = {
+			isa = PBXGroup;
+			children = (
+				D2B65CC52D8DA81700762231 /* BaseProtocols.swift */,
+				D2B65CC62D8DA81700762231 /* Errors.swift */,
+				D2B65CC72D8DA81700762231 /* TaskModuleProtocols.swift */,
+			);
+			path = Protocols;
+			sourceTree = "<group>";
+		};
+		D2B65CC92D8DA81700762231 /* Common */ = {
+			isa = PBXGroup;
+			children = (
+				D2B65CC82D8DA81700762231 /* Protocols */,
+			);
+			path = Common;
+			sourceTree = "<group>";
+		};
 		D2F6CDC22D88776000E5F5AB = {
 			isa = PBXGroup;
 			children = (
+				D2B65CC92D8DA81700762231 /* Common */,
+				D2B65CB52D8DA67F00762231 /* Modules */,
 				D2B65C822D8C69C200762231 /* Models */,
 				D2B65C862D8C69C200762231 /* Services */,
 				D2F6CDCD2D88776000E5F5AB /* ToDo */,
@@ -284,6 +386,16 @@
 				D2B65C882D8C69C200762231 /* NetworkService.swift in Sources */,
 				D2B65C892D8C69C200762231 /* CoreDataStack.swift in Sources */,
 				D2B65C8A2D8C69C200762231 /* DataManager.swift in Sources */,
+				D2B65CCA2D8DA81700762231 /* TaskModuleProtocols.swift in Sources */,
+				D2B65CCB2D8DA81700762231 /* Errors.swift in Sources */,
+				D2B65CCC2D8DA81700762231 /* BaseProtocols.swift in Sources */,
+				D2B65CB62D8DA67F00762231 /* TaskListPresenter.swift in Sources */,
+				D2B65CB72D8DA67F00762231 /* TaskListInteractor.swift in Sources */,
+				D2B65CB82D8DA67F00762231 /* TaskListModuleBuilder.swift in Sources */,
+				D2B65CB92D8DA67F00762231 /* TaskListViewController.swift in Sources */,
+				D2B65CBA2D8DA67F00762231 /* TasksFooterView.swift in Sources */,
+				D2B65CBB2D8DA67F00762231 /* TaskListRouter.swift in Sources */,
+				D2B65CBC2D8DA67F00762231 /* TaskCell.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

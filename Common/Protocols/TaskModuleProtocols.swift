@@ -30,27 +30,6 @@ struct TaskViewModel {
 
 // MARK: - TaskList Module Protocols
 
-/// Протокол для View модуля TaskList
-protocol TaskListViewInterface: BaseViewInterface {
-    /// Отображение списка задач
-    func displayTasks(_ tasks: [TaskViewModel])
-    
-    /// Обновление задачи по индексу
-    func updateTask(at index: Int, with viewModel: TaskViewModel)
-    
-    /// Удаление задачи по индексу
-    func removeTask(at index: Int)
-    
-    /// Добавление новой задачи
-    func insertTask(_ viewModel: TaskViewModel, at index: Int)
-    
-    /// Отображение результатов поиска
-    func displaySearchResults(_ tasks: [TaskViewModel])
-    
-    /// Очистка результатов поиска
-    func clearSearchResults()
-}
-
 /// Протокол для Presenter модуля TaskList
 protocol TaskListPresenterInterface: BasePresenterInterface {
     /// Получить все задачи
@@ -73,6 +52,30 @@ protocol TaskListPresenterInterface: BasePresenterInterface {
     
     /// Очистка поиска
     func clearSearch()
+}
+
+/// Протокол для View модуля TaskList
+protocol TaskListViewInterface: BaseViewInterface {
+    /// Ссылка на presenter с конкретным типом
+    var taskListPresenter: TaskListPresenterInterface? { get set }
+    
+    /// Отображение списка задач
+    func displayTasks(_ tasks: [TaskViewModel])
+    
+    /// Обновление задачи по индексу
+    func updateTask(at index: Int, with viewModel: TaskViewModel)
+    
+    /// Удаление задачи по индексу
+    func removeTask(at index: Int)
+    
+    /// Добавление новой задачи
+    func insertTask(_ viewModel: TaskViewModel, at index: Int)
+    
+    /// Отображение результатов поиска
+    func displaySearchResults(_ tasks: [TaskViewModel])
+    
+    /// Очистка результатов поиска
+    func clearSearchResults()
 }
 
 /// Протокол для Interactor модуля TaskList
@@ -101,18 +104,6 @@ protocol TaskListRouterInterface: BaseRouterInterface {
 
 // MARK: - TaskDetail Module Protocols
 
-/// Протокол для View модуля TaskDetail
-protocol TaskDetailViewInterface: BaseViewInterface {
-    /// Отображение данных задачи
-    func displayTask(_ viewModel: TaskViewModel)
-    
-    /// Переключение в режим редактирования
-    func enterEditMode()
-    
-    /// Переключение в режим просмотра
-    func exitEditMode()
-}
-
 /// Протокол для Presenter модуля TaskDetail
 protocol TaskDetailPresenterInterface: BasePresenterInterface {
     /// Обработка редактирования задачи
@@ -126,6 +117,21 @@ protocol TaskDetailPresenterInterface: BasePresenterInterface {
     
     /// Обработка изменения статуса задачи
     func didToggleTaskCompletion(isCompleted: Bool)
+}
+
+/// Протокол для View модуля TaskDetail
+protocol TaskDetailViewInterface: BaseViewInterface {
+    /// Ссылка на presenter с конкретным типом
+    var taskDetailPresenter: TaskDetailPresenterInterface? { get set }
+    
+    /// Отображение данных задачи
+    func displayTask(_ viewModel: TaskViewModel)
+    
+    /// Переключение в режим редактирования
+    func enterEditMode()
+    
+    /// Переключение в режим просмотра
+    func exitEditMode()
 }
 
 /// Протокол для Interactor модуля TaskDetail
@@ -148,12 +154,6 @@ protocol TaskDetailRouterInterface: BaseRouterInterface {
 
 // MARK: - CreateTask Module Protocols
 
-/// Протокол для View модуля CreateTask
-protocol CreateTaskViewInterface: BaseViewInterface {
-    /// Закрытие экрана после создания задачи
-    func closeScreen()
-}
-
 /// Протокол для Presenter модуля CreateTask
 protocol CreateTaskPresenterInterface: BasePresenterInterface {
     /// Обработка создания задачи
@@ -161,6 +161,15 @@ protocol CreateTaskPresenterInterface: BasePresenterInterface {
     
     /// Обработка отмены создания
     func didTapCancel()
+}
+
+/// Протокол для View модуля CreateTask
+protocol CreateTaskViewInterface: BaseViewInterface {
+    /// Ссылка на presenter с конкретным типом
+    var createTaskPresenter: CreateTaskPresenterInterface? { get set }
+    
+    /// Закрытие экрана после создания задачи
+    func closeScreen()
 }
 
 /// Протокол для Interactor модуля CreateTask
