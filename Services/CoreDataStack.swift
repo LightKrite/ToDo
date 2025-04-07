@@ -1,254 +1,214 @@
 import Foundation
 import CoreData
+import UIKit
 
+/// Класс для управления стеком Core Data
 final class CoreDataStack {
     
     // MARK: - Singleton
+    
+    /// Общий экземпляр стека Core Data
     static let shared = CoreDataStack()
     
-    private init() {}
+    // MARK: - Core Data Stack
     
-    // MARK: - Core Data stack
-    lazy var persistentContainer: NSPersistentContainer = {
+    /// Контейнер постоянного хранилища для модели данных
+    private(set) lazy var persistentContainer: NSPersistentContainer = {
         let container = NSPersistentContainer(name: "ToDo")
-        container.loadPersistentStores(completionHandler: { (storeDescription, error) in
+        container.loadPersistentStores(completionHandler: { (_, error) in
             if let error = error as NSError? {
-                fatalError("Ошибка загрузки хранилища: \(error), \(error.userInfo)")
+                fatalError("Не удалось загрузить постоянное хранилище: \(error), \(error.userInfo)")
             }
         })
         return container
     }()
     
-    var context: NSManagedObjectContext {
+    /// Контекст для выполнения операций в главном потоке
+    var mainContext: NSManagedObjectContext {
         return persistentContainer.viewContext
     }
     
+    /// Контекст для выполнения фоновых операций
+    func newBackgroundContext() -> NSManagedObjectContext {
+        return persistentContainer.newBackgroundContext()
+    }
+    
     // MARK: - Core Data Saving
-    func saveContext() {
+    
+    /// Сохраняет изменения в контексте Core Data
+    /// - Throws: Ошибку, если сохранение не удалось
+    func saveContext() throws {
+        let context = mainContext
         if context.hasChanges {
+            try context.save()
+        }
+    }
+    
+    /// Сохраняет изменения в указанном контексте
+    /// - Parameter context: Контекст, в котором нужно сохранить изменения
+    /// - Throws: Ошибку, если сохранение не удалось
+    func save(context: NSManagedObjectContext) throws {
+        if context.hasChanges {
+            try context.save()
+        }
+    }
+    
+    // MARK: - Core Data Operations
+    
+    /// Выполняет операцию с данными в фоновом контексте
+    /// - Parameters:
+    ///   - operation: Операция для выполнения
+    ///   - completion: Замыкание, вызываемое после завершения операции
+    func performBackgroundTask(_ operation: @escaping (NSManagedObjectContext) -> Void, completion: (() -> Void)? = nil) {
+        let context = newBackgroundContext()
+        context.perform {
+            operation(context)
+            completion?()
+        }
+    }
+    
+    /// Выполняет операцию с данными в фоновом контексте и сохраняет изменения
+    /// - Parameters:
+    ///   - operation: Операция для выполнения
+    ///   - completion: Замыкание, вызываемое после завершения операции с результатом
+    func performBackgroundTaskAndSave(_ operation: @escaping (NSManagedObjectContext) -> Void, completion: ((Result<Void, Error>) -> Void)? = nil) {
+        let context = newBackgroundContext()
+        context.perform {
+            operation(context)
+            
             do {
-                try context.save()
+                if context.hasChanges {
+                    try context.save()
+                }
+                completion?(.success(()))
             } catch {
-                let nserror = error as NSError
-                print("Ошибка сохранения контекста: \(nserror), \(nserror.userInfo)")
+                completion?(.failure(error))
             }
+        }
+    }
+    
+    // MARK: - Initialization
+    
+    private init() {
+        setupNotificationHandling()
+    }
+    
+    // MARK: - Private Methods
+    
+    /// Настраивает обработку уведомлений
+    private func setupNotificationHandling() {
+        // Наблюдение за уведомлениями о завершении работы приложения
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(saveChangesBeforeTermination(_:)),
+            name: UIApplication.willTerminateNotification,
+            object: nil
+        )
+    }
+    
+    /// Сохраняет изменения перед завершением работы приложения
+    @objc private func saveChangesBeforeTermination(_ notification: Notification) {
+        do {
+            try saveContext()
+        } catch {
+            print("Ошибка при сохранении данных перед завершением работы: \(error)")
+        }
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    // MARK: - Task Operations
+    func fetchAllTasks(completion: @escaping (Result<[Task], Error>) -> Void) {
+        let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
+        
+        do {
+            // Сортировка по дате создания (от новых к старым)
+            let sortDescriptor = NSSortDescriptor(key: "createdAt", ascending: false)
+            fetchRequest.sortDescriptors = [sortDescriptor]
+            
+            // Выполняем запрос на получение задач
+            let tasks = try mainContext.fetch(fetchRequest)
+            completion(.success(tasks))
+        } catch {
+            completion(.failure(error))
+        }
+    }
+    
+    func searchTasks(with query: String, completion: @escaping (Result<[Task], Error>) -> Void) {
+        let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
+        
+        do {
+            // Создаем предикат для поиска по заголовку или описанию
+            let titlePredicate = NSPredicate(format: "title CONTAINS[cd] %@", query)
+            let descriptionPredicate = NSPredicate(format: "taskDescription CONTAINS[cd] %@", query)
+            let compoundPredicate = NSCompoundPredicate(orPredicateWithSubpredicates: [titlePredicate, descriptionPredicate])
+            fetchRequest.predicate = compoundPredicate
+            
+            // Сортировка по дате создания (от новых к старым)
+            let sortDescriptor = NSSortDescriptor(key: "createdAt", ascending: false)
+            fetchRequest.sortDescriptors = [sortDescriptor]
+            
+            // Выполняем запрос на получение задач
+            let tasks = try mainContext.fetch(fetchRequest)
+            completion(.success(tasks))
+        } catch {
+            completion(.failure(error))
+        }
+    }
+    
+    func deleteTask(_ task: Task, completion: @escaping (Result<Bool, Error>) -> Void) {
+        do {
+            // Удаляем задачу из контекста
+            mainContext.delete(task)
+            
+            // Сохраняем контекст
+            try saveContext()
+            
+            // Возвращаем успех
+            completion(.success(true))
+        } catch {
+            completion(.failure(error))
         }
     }
     
     // MARK: - CRUD операции
     
     // Создание новой задачи
-    func createTask(id: String, title: String, description: String?, isCompleted: Bool, completionHandler: @escaping (Task?) -> Void) {
-        let backgroundContext = persistentContainer.newBackgroundContext()
-        
-        backgroundContext.perform {
-            let task = Task(context: backgroundContext)
-            task.id = id
-            task.title = title
-            task.taskDescription = description
-            task.createdAt = Date()
-            task.isCompleted = isCompleted
-            
-            do {
-                try backgroundContext.save()
-                
-                // Синхронизация с main context
-                self.context.perform {
-                    let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
-                    fetchRequest.predicate = NSPredicate(format: "id == %@", id)
-                    
-                    do {
-                        let tasks = try self.context.fetch(fetchRequest)
-                        completionHandler(tasks.first)
-                    } catch {
-                        completionHandler(nil)
-                    }
-                }
-            } catch {
-                print("Ошибка создания задачи: \(error)")
-                completionHandler(nil)
-            }
-        }
-    }
-    
-    // Получение всех задач
-    func fetchAllTasks(completionHandler: @escaping ([Task]) -> Void) {
-        let backgroundContext = persistentContainer.newBackgroundContext()
-        
-        backgroundContext.perform {
-            let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
-            fetchRequest.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]
-            
-            do {
-                let tasks = try backgroundContext.fetch(fetchRequest)
-                
-                // Переключаемся на главный контекст
-                self.context.perform {
-                    let mainContextTasks = tasks.compactMap { task -> Task? in
-                        guard let id = task.id else { return nil }
-                        let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
-                        fetchRequest.predicate = NSPredicate(format: "id == %@", id)
-                        
-                        do {
-                            let results = try self.context.fetch(fetchRequest)
-                            return results.first
-                        } catch {
-                            return nil
-                        }
-                    }
-                    
-                    completionHandler(mainContextTasks)
-                }
-            } catch {
-                print("Ошибка при получении задач: \(error)")
-                completionHandler([])
-            }
-        }
-    }
-    
-    // Поиск задач по строке
-    func searchTasks(with query: String, completionHandler: @escaping ([Task]) -> Void) {
-        let backgroundContext = persistentContainer.newBackgroundContext()
-        
-        backgroundContext.perform {
-            let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
-            fetchRequest.predicate = NSPredicate(format: "title CONTAINS[cd] %@ OR taskDescription CONTAINS[cd] %@", query, query)
-            
-            do {
-                let tasks = try backgroundContext.fetch(fetchRequest)
-                
-                // Переключаемся на главный контекст
-                self.context.perform {
-                    let mainContextTasks = tasks.compactMap { task -> Task? in
-                        guard let id = task.id else { return nil }
-                        let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
-                        fetchRequest.predicate = NSPredicate(format: "id == %@", id)
-                        
-                        do {
-                            let results = try self.context.fetch(fetchRequest)
-                            return results.first
-                        } catch {
-                            return nil
-                        }
-                    }
-                    
-                    completionHandler(mainContextTasks)
-                }
-            } catch {
-                print("Ошибка при поиске задач: \(error)")
-                completionHandler([])
-            }
-        }
+    func createTask(_ task: Task) throws -> Task {
+        try saveContext()
+        return task
     }
     
     // Обновление задачи
-    func updateTask(task: Task, title: String, description: String?, isCompleted: Bool, completionHandler: @escaping (Bool) -> Void) {
-        let backgroundContext = persistentContainer.newBackgroundContext()
-        
-        guard let id = task.id else {
-            completionHandler(false)
-            return
-        }
-        
-        backgroundContext.perform {
-            let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
-            fetchRequest.predicate = NSPredicate(format: "id == %@", id)
-            
-            do {
-                let tasks = try backgroundContext.fetch(fetchRequest)
-                
-                if let taskToUpdate = tasks.first {
-                    taskToUpdate.title = title
-                    taskToUpdate.taskDescription = description
-                    taskToUpdate.isCompleted = isCompleted
-                    
-                    try backgroundContext.save()
-                    
-                    // Обновляем в главном контексте
-                    self.context.perform {
-                        task.title = title
-                        task.taskDescription = description
-                        task.isCompleted = isCompleted
-                        
-                        do {
-                            try self.context.save()
-                            completionHandler(true)
-                        } catch {
-                            completionHandler(false)
-                        }
-                    }
-                } else {
-                    completionHandler(false)
-                }
-            } catch {
-                print("Ошибка при обновлении задачи: \(error)")
-                completionHandler(false)
-            }
-        }
+    func updateTask(_ task: Task) throws -> Task {
+        try saveContext()
+        return task
     }
     
-    // Удаление задачи
-    func deleteTask(task: Task, completionHandler: @escaping (Bool) -> Void) {
-        let backgroundContext = persistentContainer.newBackgroundContext()
-        
-        guard let id = task.id else {
-            completionHandler(false)
-            return
-        }
-        
-        backgroundContext.perform {
-            let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
-            fetchRequest.predicate = NSPredicate(format: "id == %@", id)
-            
-            do {
-                let tasks = try backgroundContext.fetch(fetchRequest)
-                
-                if let taskToDelete = tasks.first {
-                    backgroundContext.delete(taskToDelete)
-                    try backgroundContext.save()
-                    
-                    // Удаляем в главном контексте
-                    self.context.perform {
-                        self.context.delete(task)
-                        
-                        do {
-                            try self.context.save()
-                            completionHandler(true)
-                        } catch {
-                            completionHandler(false)
-                        }
-                    }
-                } else {
-                    completionHandler(false)
-                }
-            } catch {
-                print("Ошибка при удалении задачи: \(error)")
-                completionHandler(false)
-            }
-        }
+    // Сохранение массива задач
+    func saveTasks(_ tasks: [Task]) throws {
+        try saveContext()
     }
+}
+
+enum CoreDataError: LocalizedError {
+    case taskNotFound
+    case saveFailed(Error)
+    case fetchFailed(Error)
+    case deleteFailed(Error)
     
-    // Удаление всех задач (для тестирования)
-    func deleteAllTasks(completionHandler: @escaping (Bool) -> Void) {
-        let backgroundContext = persistentContainer.newBackgroundContext()
-        
-        backgroundContext.perform {
-            let fetchRequest: NSFetchRequest<NSFetchRequestResult> = Task.fetchRequest()
-            let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
-            
-            do {
-                try backgroundContext.execute(deleteRequest)
-                try backgroundContext.save()
-                
-                // Уведомляем главный контекст
-                self.context.perform {
-                    self.context.reset()
-                    completionHandler(true)
-                }
-            } catch {
-                print("Ошибка при удалении всех задач: \(error)")
-                completionHandler(false)
-            }
+    var errorDescription: String? {
+        switch self {
+        case .taskNotFound:
+            return "Задача не найдена"
+        case .saveFailed(let error):
+            return "Ошибка сохранения: \(error.localizedDescription)"
+        case .fetchFailed(let error):
+            return "Ошибка получения данных: \(error.localizedDescription)"
+        case .deleteFailed(let error):
+            return "Ошибка удаления: \(error.localizedDescription)"
         }
     }
 } 

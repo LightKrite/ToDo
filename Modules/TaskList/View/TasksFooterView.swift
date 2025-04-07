@@ -29,6 +29,12 @@ final class TasksFooterView: UIView {
     private func setupView() {
         backgroundColor = Constants.backgroundColor
         
+        // Добавляем верхнюю разделительную линию
+        let topSeparator = UIView()
+        topSeparator.backgroundColor = UIColor(white: 0.2, alpha: 1.0)
+        topSeparator.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(topSeparator)
+        
         // Настройка метки с количеством задач
         countLabel.textColor = .white
         countLabel.font = Constants.taskCountFont
@@ -36,23 +42,57 @@ final class TasksFooterView: UIView {
         addSubview(countLabel)
         
         // Настройка кнопки добавления
-        let pencilConfig = UIImage.SymbolConfiguration(pointSize: 22, weight: .regular)
+        // Используем желтый карандаш как на макете
+        let pencilConfig = UIImage.SymbolConfiguration(pointSize: 24, weight: .regular)
         addButton.setImage(UIImage(systemName: "square.and.pencil", withConfiguration: pencilConfig), for: .normal)
         addButton.tintColor = Constants.buttonTintColor
+        addButton.backgroundColor = .clear
         addButton.addTarget(self, action: #selector(addButtonTapped), for: .touchUpInside)
         addButton.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Создаем круглый фон для кнопки
+        addButton.layer.cornerRadius = 24
+        addButton.layer.masksToBounds = true
+        
+        // Добавляем эффект нажатия
+        addButton.addTarget(self, action: #selector(buttonTouchDown), for: .touchDown)
+        addButton.addTarget(self, action: #selector(buttonTouchUp), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+        
         addSubview(addButton)
         
         // Установка ограничений AutoLayout
         NSLayoutConstraint.activate([
+            // Верхний разделитель
+            topSeparator.topAnchor.constraint(equalTo: topAnchor),
+            topSeparator.leadingAnchor.constraint(equalTo: leadingAnchor),
+            topSeparator.trailingAnchor.constraint(equalTo: trailingAnchor),
+            topSeparator.heightAnchor.constraint(equalToConstant: 0.5),
+            
+            // Метка количества задач
             countLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20),
             countLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
             
+            // Кнопка добавления
             addButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
             addButton.centerYAnchor.constraint(equalTo: centerYAnchor),
-            addButton.widthAnchor.constraint(equalToConstant: 36),
-            addButton.heightAnchor.constraint(equalToConstant: 36)
+            addButton.widthAnchor.constraint(equalToConstant: 48),
+            addButton.heightAnchor.constraint(equalToConstant: 48)
         ])
+    }
+    
+    // MARK: - Button Effects
+    @objc private func buttonTouchDown() {
+        UIView.animate(withDuration: 0.1) {
+            self.addButton.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
+            self.addButton.alpha = 0.9
+        }
+    }
+    
+    @objc private func buttonTouchUp() {
+        UIView.animate(withDuration: 0.1) {
+            self.addButton.transform = .identity
+            self.addButton.alpha = 1.0
+        }
     }
     
     // MARK: - Actions

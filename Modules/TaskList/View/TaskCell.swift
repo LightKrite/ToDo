@@ -1,30 +1,24 @@
 import UIKit
 
 final class TaskCell: UITableViewCell {
-    // MARK: - UI Components
-    private let checkboxButton = UIButton(type: .system)
-    private let titleLabel = UILabel()
+    
+    // MARK: - UI Elements
+    private(set) var titleLabel = UILabel()
     private let descriptionLabel = UILabel()
     private let dateLabel = UILabel()
-    private let separatorView = UIView()
+    private let checkboxButton = UIButton()
+    private let containerView = UIView()
     
-    // MARK: - Callback
+    // Блокирующий слой для предотвращения системного выделения
+    private let highlightBlockingView = UIView()
+    
+    // MARK: - Properties
     var checkboxAction: (() -> Void)?
-    
-    // MARK: - Constants
-    private struct Constants {
-        static let checkboxSize: CGFloat = 24
-        static let contentInsets = UIEdgeInsets(top: 16, left: 20, bottom: 16, right: 20)
-        static let titleFont = UIFont.systemFont(ofSize: 17, weight: .medium)
-        static let descriptionFont = UIFont.systemFont(ofSize: 15)
-        static let dateFont = UIFont.systemFont(ofSize: 14)
-        static let completedTaskColor = UIColor(red: 1.0, green: 0.84, blue: 0.0, alpha: 1.0) // Желтый
-    }
     
     // MARK: - Initialization
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
-        setupCell()
+        setupUI()
     }
     
     required init?(coder: NSCoder) {
@@ -32,69 +26,181 @@ final class TaskCell: UITableViewCell {
     }
     
     // MARK: - UI Setup
-    private func setupCell() {
-        backgroundColor = .black
+    private func setupUI() {
+        setupCellBackground()
+        setupHighlightBlockingLayer()
+        setupContainerView()
+        setupLabelsAndButtons()
+        setupConstraints()
+    }
+    
+    private func setupCellBackground() {
+        backgroundColor = .clear
+        contentView.backgroundColor = .clear
         selectionStyle = .none
+    }
+    
+    private func setupHighlightBlockingLayer() {
+        highlightBlockingView.backgroundColor = .black
+        highlightBlockingView.isUserInteractionEnabled = false
+        highlightBlockingView.alpha = 0.0
+        highlightBlockingView.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(highlightBlockingView)
+    }
+    
+    private func setupContainerView() {
+        containerView.backgroundColor = .black
+        containerView.layer.cornerRadius = 12
+        containerView.clipsToBounds = true
+        containerView.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(containerView)
+    }
+    
+    private func setupLabelsAndButtons() {
+        setupTitleLabel()
+        setupDescriptionLabel()
+        setupDateLabel()
+        setupCheckboxButton()
         
-        // Настройка чекбокса
-        checkboxButton.translatesAutoresizingMaskIntoConstraints = false
-        checkboxButton.addTarget(self, action: #selector(checkboxTapped), for: .touchUpInside)
-        contentView.addSubview(checkboxButton)
-        
-        // Настройка заголовка задачи
+        containerView.addSubview(checkboxButton)
+        containerView.addSubview(titleLabel)
+        containerView.addSubview(descriptionLabel)
+        containerView.addSubview(dateLabel)
+    }
+    
+    private func setupTitleLabel() {
+        titleLabel.font = UIFont.systemFont(ofSize: 17, weight: .semibold)
         titleLabel.textColor = .white
-        titleLabel.font = Constants.titleFont
-        titleLabel.numberOfLines = 1
+        titleLabel.numberOfLines = 0
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(titleLabel)
-        
-        // Настройка описания задачи
-        descriptionLabel.textColor = UIColor(white: 0.6, alpha: 1.0)
-        descriptionLabel.font = Constants.descriptionFont
+    }
+    
+    private func setupDescriptionLabel() {
+        descriptionLabel.font = UIFont.systemFont(ofSize: 14)
+        descriptionLabel.textColor = .lightGray
         descriptionLabel.numberOfLines = 2
         descriptionLabel.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(descriptionLabel)
-        
-        // Настройка даты
-        dateLabel.textColor = UIColor(white: 0.5, alpha: 1.0)
-        dateLabel.font = Constants.dateFont
+    }
+    
+    private func setupDateLabel() {
+        dateLabel.font = UIFont.systemFont(ofSize: 12)
+        dateLabel.textColor = .gray
         dateLabel.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(dateLabel)
-        
-        // Настройка разделителя
-        separatorView.backgroundColor = UIColor(white: 0.2, alpha: 1.0)
-        separatorView.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(separatorView)
-        
-        // Установка ограничений AutoLayout
+    }
+    
+    private func setupCheckboxButton() {
+        checkboxButton.setImage(UIImage(systemName: "circle"), for: .normal)
+        checkboxButton.setImage(UIImage(systemName: "checkmark.circle.fill"), for: .selected)
+        checkboxButton.tintColor = .white
+        checkboxButton.addTarget(self, action: #selector(checkboxTapped), for: .touchUpInside)
+        checkboxButton.translatesAutoresizingMaskIntoConstraints = false
+    }
+    
+    private func setupConstraints() {
+        setupBlockingViewConstraints()
+        setupContainerConstraints()
+        setupContentConstraints()
+        setupHeightConstraint()
+    }
+    
+    private func setupBlockingViewConstraints() {
         NSLayoutConstraint.activate([
-            // Чекбокс
-            checkboxButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: Constants.contentInsets.left),
-            checkboxButton.topAnchor.constraint(equalTo: contentView.topAnchor, constant: Constants.contentInsets.top),
-            checkboxButton.widthAnchor.constraint(equalToConstant: Constants.checkboxSize),
-            checkboxButton.heightAnchor.constraint(equalToConstant: Constants.checkboxSize),
-            
-            // Заголовок
-            titleLabel.leadingAnchor.constraint(equalTo: checkboxButton.trailingAnchor, constant: 15),
-            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -Constants.contentInsets.right),
-            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: Constants.contentInsets.top),
-            
-            // Описание
-            descriptionLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
-            descriptionLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -Constants.contentInsets.right),
-            descriptionLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
-            
-            // Дата
-            dateLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
-            dateLabel.topAnchor.constraint(equalTo: descriptionLabel.bottomAnchor, constant: 8),
-            dateLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -Constants.contentInsets.bottom),
-            
-            // Разделитель
-            separatorView.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
-            separatorView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            separatorView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            separatorView.heightAnchor.constraint(equalToConstant: 0.5)
+            highlightBlockingView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            highlightBlockingView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            highlightBlockingView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            highlightBlockingView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
+    }
+    
+    private func setupContainerConstraints() {
+        NSLayoutConstraint.activate([
+            containerView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
+            containerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            containerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            containerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8)
+        ])
+    }
+    
+    private func setupContentConstraints() {
+        NSLayoutConstraint.activate([
+            checkboxButton.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
+            checkboxButton.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
+            checkboxButton.widthAnchor.constraint(equalToConstant: 24),
+            checkboxButton.heightAnchor.constraint(equalToConstant: 24),
+            
+            titleLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 16),
+            titleLabel.leadingAnchor.constraint(equalTo: checkboxButton.trailingAnchor, constant: 16),
+            titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
+            
+            descriptionLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
+            descriptionLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            descriptionLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
+            
+            dateLabel.topAnchor.constraint(equalTo: descriptionLabel.bottomAnchor, constant: 8),
+            dateLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
+            dateLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
+            dateLabel.bottomAnchor.constraint(lessThanOrEqualTo: containerView.bottomAnchor, constant: -16)
+        ])
+    }
+    
+    private func setupHeightConstraint() {
+        let heightConstraint = containerView.heightAnchor.constraint(greaterThanOrEqualToConstant: 90)
+        heightConstraint.priority = UILayoutPriority(999)
+        heightConstraint.isActive = true
+    }
+    
+    // MARK: - Configuration
+    func configure(with title: String?, description: String?, date: Date?, isCompleted: Bool) {
+        titleLabel.attributedText = nil
+        titleLabel.text = nil
+        
+        configureCheckboxState(isCompleted)
+        configureTitleWithCompletion(title, isCompleted)
+        configureDescription(description)
+        configureDate(date)
+        
+        setNeedsLayout()
+        layoutIfNeeded()
+    }
+    
+    private func configureCheckboxState(_ isCompleted: Bool) {
+        checkboxButton.isSelected = isCompleted
+    }
+    
+    private func configureTitleWithCompletion(_ title: String?, _ isCompleted: Bool) {
+        let finalTitle = title?.isEmpty ?? true ? "Без названия" : title!
+        
+        titleLabel.textColor = .white
+        
+        if isCompleted {
+            applyStrikethroughStyle(to: finalTitle)
+        } else {
+            titleLabel.text = finalTitle
+        }
+    }
+    
+    private func applyStrikethroughStyle(to text: String) {
+        let attributes: [NSAttributedString.Key: Any] = [
+            .strikethroughStyle: NSUnderlineStyle.single.rawValue,
+            .strikethroughColor: UIColor.white,
+            .foregroundColor: UIColor.white
+        ]
+        titleLabel.attributedText = NSAttributedString(string: text, attributes: attributes)
+    }
+    
+    private func configureDescription(_ description: String?) {
+        descriptionLabel.text = description?.isEmpty ?? true ? "Без описания" : description
+    }
+    
+    private func configureDate(_ date: Date?) {
+        if let date = date {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .medium
+            formatter.timeStyle = .short
+            dateLabel.text = formatter.string(from: date)
+        } else {
+            dateLabel.text = ""
+        }
     }
     
     // MARK: - Actions
@@ -102,50 +208,80 @@ final class TaskCell: UITableViewCell {
         checkboxAction?()
     }
     
-    // MARK: - Configuration
-    func configure(title: String, description: String, date: String, isCompleted: Bool) {
-        // Настройка состояния задачи (выполнена/не выполнена)
-        configureCompletionState(isCompleted: isCompleted, title: title)
-        
-        // Установка текста
-        descriptionLabel.text = description
-        dateLabel.text = date
+    // MARK: - Overrides for Cell States
+    override func setHighlighted(_ highlighted: Bool, animated: Bool) {
+        // Не вызываем super, чтобы полностью исключить системные эффекты
+        applyHighlightState(highlighted, animated: animated)
     }
     
-    private func configureCompletionState(isCompleted: Bool, title: String) {
-        if isCompleted {
-            // Стиль для выполненной задачи
-            checkboxButton.setImage(UIImage(systemName: "checkmark.circle.fill"), for: .normal)
-            checkboxButton.tintColor = Constants.completedTaskColor
-            
-            // Зачеркнутый текст для выполненных задач
-            let attributedString = NSAttributedString(
-                string: title,
-                attributes: [
-                    .strikethroughStyle: NSUnderlineStyle.single.rawValue,
-                    .strikethroughColor: UIColor.lightGray,
-                    .foregroundColor: UIColor.gray
-                ]
-            )
-            titleLabel.attributedText = attributedString
-            descriptionLabel.alpha = 0.5 // Делаем описание полупрозрачным для выполненных задач
+    private func applyHighlightState(_ highlighted: Bool, animated: Bool) {
+        if highlighted {
+            activateHighlightedState(animated: animated)
         } else {
-            // Стиль для невыполненной задачи
-            checkboxButton.setImage(UIImage(systemName: "circle"), for: .normal)
-            checkboxButton.tintColor = .gray
-            titleLabel.attributedText = nil
-            titleLabel.text = title
-            titleLabel.textColor = .white
-            descriptionLabel.alpha = 1.0
+            deactivateHighlightedState(animated: animated)
         }
     }
     
+    private func activateHighlightedState(animated: Bool) {
+        highlightBlockingView.alpha = 1.0
+        highlightBlockingView.backgroundColor = .black
+        
+        UIView.animate(withDuration: animated ? 0.15 : 0) {
+            self.containerView.backgroundColor = UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1.0)
+            self.containerView.transform = CGAffineTransform(scaleX: 0.98, y: 0.98)
+        }
+    }
+    
+    private func deactivateHighlightedState(animated: Bool) {
+        highlightBlockingView.alpha = 0.0
+        
+        UIView.animate(withDuration: animated ? 0.2 : 0) {
+            self.containerView.backgroundColor = .black
+            self.containerView.transform = .identity
+        }
+    }
+
+    override func setSelected(_ selected: Bool, animated: Bool) {
+        // Не вызываем super, чтобы полностью исключить системные эффекты
+        highlightBlockingView.alpha = selected ? 1.0 : 0.0
+        
+        if selected {
+            highlightBlockingView.backgroundColor = .black
+        }
+    }
+    
+    // MARK: - Lifecycle
     override func prepareForReuse() {
         super.prepareForReuse()
+        resetContent()
+    }
+    
+    private func resetContent() {
         titleLabel.attributedText = nil
         titleLabel.text = nil
         descriptionLabel.text = nil
         dateLabel.text = nil
-        checkboxAction = nil
+        checkboxButton.isSelected = false
+    }
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        ensureCorrectZOrder()
+    }
+    
+    private func ensureCorrectZOrder() {
+        contentView.bringSubviewToFront(highlightBlockingView)
+        contentView.bringSubviewToFront(containerView)
+    }
+    
+    override func draw(_ rect: CGRect) {
+        super.draw(rect)
+        enforceBlackBackground()
+    }
+    
+    private func enforceBlackBackground() {
+        backgroundColor = .black
+        contentView.backgroundColor = .clear
+        highlightBlockingView.backgroundColor = .black
     }
 } 

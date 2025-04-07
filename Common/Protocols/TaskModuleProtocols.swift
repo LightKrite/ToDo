@@ -1,155 +1,112 @@
 import Foundation
-
-// MARK: - ViewModels
-
-/// ViewModel для отображения задачи в списке
-struct TaskViewModel {
-    let id: String
-    let title: String
-    let description: String?
-    let createdAt: Date
-    let isCompleted: Bool
-    
-    /// Создание из Core Data модели
-    init(task: Task) {
-        self.id = task.id ?? ""
-        self.title = task.title ?? ""
-        self.description = task.taskDescription
-        self.createdAt = task.createdAt ?? Date()
-        self.isCompleted = task.isCompleted
-    }
-    
-    /// Форматированная дата создания
-    var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: createdAt)
-    }
-}
+import UIKit
+import CoreData
 
 // MARK: - TaskList Module Protocols
 
 /// Протокол для Presenter модуля TaskList
-protocol TaskListPresenterInterface: BasePresenterInterface {
-    /// Получить все задачи
+protocol TaskListPresenterInterface: AnyObject {
+    var view: TaskListViewInterface? { get set }
+    var interactor: TaskListInteractorInterface? { get set }
+    var router: TaskListRouterInterface? { get set }
+    
+    func viewDidLoad()
+    func viewWillAppear()
     func fetchTasks()
-    
-    /// Обработка выбора задачи
-    func didSelectTask(at index: Int)
-    
-    /// Обработка нажатия на кнопку добавления задачи
     func didTapAddTask()
-    
-    /// Обработка переключения статуса задачи
-    func didToggleTaskCompletion(at index: Int, isCompleted: Bool)
-    
-    /// Обработка удаления задачи
+    func didTapTask(at index: Int)
     func didTapDeleteTask(at index: Int)
-    
-    /// Обработка поиска задач
+    func didToggleTaskCompletion(at index: Int)
     func searchTasks(with query: String)
-    
-    /// Очистка поиска
     func clearSearch()
 }
 
 /// Протокол для View модуля TaskList
-protocol TaskListViewInterface: BaseViewInterface {
-    /// Ссылка на presenter с конкретным типом
-    var taskListPresenter: TaskListPresenterInterface? { get set }
-    
-    /// Отображение списка задач
+protocol TaskListViewInterface: AnyObject {
     func displayTasks(_ tasks: [TaskViewModel])
+    func displayError(_ message: String)
     
-    /// Обновление задачи по индексу
-    func updateTask(at index: Int, with viewModel: TaskViewModel)
+    // Методы для обратной совместимости
+    func showError(_ message: String)
+    func showLoading()
+    func hideLoading()
     
-    /// Удаление задачи по индексу
-    func removeTask(at index: Int)
-    
-    /// Добавление новой задачи
-    func insertTask(_ viewModel: TaskViewModel, at index: Int)
-    
-    /// Отображение результатов поиска
+    // Методы для работы с поиском
     func displaySearchResults(_ tasks: [TaskViewModel])
-    
-    /// Очистка результатов поиска
     func clearSearchResults()
+    
+    // Методы для работы с отдельными задачами
+    func updateTask(at index: Int, with viewModel: TaskViewModel)
+    func removeTask(at index: Int)
+    func insertTask(_ viewModel: TaskViewModel, at index: Int)
 }
 
 /// Протокол для Interactor модуля TaskList
-protocol TaskListInteractorInterface: BaseInteractorInterface {
-    /// Получить все задачи
+protocol TaskListInteractorInterface: AnyObject {
+    var presenter: TaskListPresenterInterface? { get set }
+    var dataManager: DataManagerProtocol { get }
+    
     func fetchAllTasks(completion: @escaping (Result<[Task], Error>) -> Void)
-    
-    /// Изменить статус задачи
-    func toggleTaskCompletion(task: Task, isCompleted: Bool, completion: @escaping (Result<Task, Error>) -> Void)
-    
-    /// Удалить задачу
-    func deleteTask(task: Task, completion: @escaping (Result<Bool, Error>) -> Void)
-    
-    /// Поиск задач
+    func fetchInitialData(completion: @escaping (Result<[Task], Error>) -> Void)
     func searchTasks(with query: String, completion: @escaping (Result<[Task], Error>) -> Void)
+    func updateTask(task: Task, completion: @escaping (Result<Task, Error>) -> Void)
+    func deleteTask(task: Task, completion: @escaping (Result<Bool, Error>) -> Void)
 }
 
 /// Протокол для Router модуля TaskList
-protocol TaskListRouterInterface: BaseRouterInterface {
-    /// Переход к экрану просмотра/редактирования задачи
-    func navigateToTaskDetail(with task: Task)
+protocol TaskListRouterInterface: AnyObject {
+    var viewController: UIViewController? { get set }
     
-    /// Переход к экрану создания задачи
+    func navigateToTaskDetail(with task: Task)
     func navigateToCreateTask()
 }
 
 // MARK: - TaskDetail Module Protocols
 
 /// Протокол для Presenter модуля TaskDetail
-protocol TaskDetailPresenterInterface: BasePresenterInterface {
-    /// Обработка редактирования задачи
-    func didTapEditTask()
+protocol TaskDetailPresenterInterface: AnyObject {
+    var view: TaskDetailViewInterface? { get set }
+    var interactor: TaskDetailInteractorInterface? { get set }
+    var router: TaskDetailRouterInterface? { get set }
     
-    /// Обработка сохранения задачи
+    func viewDidLoad()
     func didTapSaveTask(title: String, description: String?, isCompleted: Bool)
-    
-    /// Обработка удаления задачи
     func didTapDeleteTask()
-    
-    /// Обработка изменения статуса задачи
+    func didTapEditTask()
+    func didTapCancelEdit()
     func didToggleTaskCompletion(isCompleted: Bool)
 }
 
 /// Протокол для View модуля TaskDetail
-protocol TaskDetailViewInterface: BaseViewInterface {
-    /// Ссылка на presenter с конкретным типом
-    var taskDetailPresenter: TaskDetailPresenterInterface? { get set }
-    
-    /// Отображение данных задачи
+protocol TaskDetailViewInterface: AnyObject {
     func displayTask(_ viewModel: TaskViewModel)
-    
-    /// Переключение в режим редактирования
+    func displayError(_ message: String)
     func enterEditMode()
-    
-    /// Переключение в режим просмотра
     func exitEditMode()
 }
 
 /// Протокол для Interactor модуля TaskDetail
-protocol TaskDetailInteractorInterface: BaseInteractorInterface {
-    /// Получить задачу по ID
-    func fetchTask(with id: String, completion: @escaping (Result<Task, Error>) -> Void)
+protocol TaskDetailInteractorInterface: AnyObject {
+    var presenter: TaskDetailPresenterInterface? { get set }
+    var task: Task { get }
+    var dataManager: DataManagerProtocol { get }
     
-    /// Обновить задачу
-    func updateTask(task: Task, title: String, description: String?, isCompleted: Bool, completion: @escaping (Result<Task, Error>) -> Void)
-    
-    /// Удалить задачу
-    func deleteTask(task: Task, completion: @escaping (Result<Bool, Error>) -> Void)
+    func getTask(completion: @escaping (Result<Task, Error>) -> Void)
+    func updateTask(title: String, description: String?, isCompleted: Bool, completion: @escaping (Result<Task, Error>) -> Void)
+    func deleteTask(_ task: Task, completion: @escaping (Result<Bool, Error>) -> Void)
 }
 
 /// Протокол для Router модуля TaskDetail
-protocol TaskDetailRouterInterface: BaseRouterInterface {
-    /// Вернуться к списку задач
-    func navigateBackToTaskList()
+protocol TaskDetailRouterInterface: AnyObject {
+    var viewController: UIViewController? { get set }
+    
+    func navigateBack()
+}
+
+/// Протокол для Builder модуля TaskDetail
+protocol TaskDetailModuleBuilderInterface {
+    /// Создать модуль TaskDetail на основе существующей задачи
+    static func build(with task: Task?) -> UIViewController
 }
 
 // MARK: - CreateTask Module Protocols

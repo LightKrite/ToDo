@@ -56,7 +56,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // to restore the scene back to its current state.
         
         // Сохраняем контекст Core Data при уходе в фон
-        CoreDataStack.shared.saveContext()
+        do {
+            try CoreDataStack.shared.saveContext()
+        } catch {
+            print("Ошибка при сохранении контекста CoreData: \(error.localizedDescription)")
+        }
     }
     
     // MARK: - UI Appearance Configuration
