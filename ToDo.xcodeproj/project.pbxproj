@@ -10,14 +10,12 @@
 		D2390FDC2D94380300BAC813 /* ToDo.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = D2390FC32D94380300BAC813 /* ToDo.xcdatamodeld */; };
 		D2390FE32D94380300BAC813 /* ToDoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2390FC72D94380300BAC813 /* ToDoTests.swift */; };
 		D2390FEA2D94380300BAC813 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D2390FC12D94380300BAC813 /* Main.storyboard */; };
-		D2390FEB2D94380300BAC813 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = D2390FBD2D94380300BAC813 /* Info.plist */; };
 		D2390FEC2D94380300BAC813 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = D2390FB72D94380300BAC813 /* README.md */; };
 		D2390FED2D94380300BAC813 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D2390FBF2D94380300BAC813 /* LaunchScreen.storyboard */; };
 		D2390FFC2D94380300BAC813 /* ToDo.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = D2390FC32D94380300BAC813 /* ToDo.xcdatamodeld */; };
 		D23910002D94380300BAC813 /* ToDoUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2390FC92D94380300BAC813 /* ToDoUITests.swift */; };
 		D23910052D94380300BAC813 /* ToDoUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2390FCA2D94380300BAC813 /* ToDoUITestsLaunchTests.swift */; };
 		D239100A2D94380300BAC813 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D2390FC12D94380300BAC813 /* Main.storyboard */; };
-		D239100B2D94380300BAC813 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = D2390FBD2D94380300BAC813 /* Info.plist */; };
 		D239100C2D94380300BAC813 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = D2390FB72D94380300BAC813 /* README.md */; };
 		D239100D2D94380300BAC813 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = D2390FBF2D94380300BAC813 /* LaunchScreen.storyboard */; };
 		D23910102D94380300BAC813 /* CoreDataStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2390FB82D94380300BAC813 /* CoreDataStack.swift */; };
@@ -530,7 +528,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				D2390FEA2D94380300BAC813 /* Main.storyboard in Resources */,
-				D2390FEB2D94380300BAC813 /* Info.plist in Resources */,
 				D2390FEC2D94380300BAC813 /* README.md in Resources */,
 				D2390FED2D94380300BAC813 /* LaunchScreen.storyboard in Resources */,
 			);
@@ -541,7 +538,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				D239100A2D94380300BAC813 /* Main.storyboard in Resources */,
-				D239100B2D94380300BAC813 /* Info.plist in Resources */,
 				D239100C2D94380300BAC813 /* README.md in Resources */,
 				D239100D2D94380300BAC813 /* LaunchScreen.storyboard in Resources */,
 			);
