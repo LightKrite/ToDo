@@ -1,298 +1,355 @@
 import Foundation
+import CoreData
 
-enum NetworkError: Error {
+/// Перечисление возможных ошибок при работе с сетью
+enum NetworkError: Error, LocalizedError {
     case invalidURL
+    case networkError(Error)
     case noData
-    case decodingError
-    case serverError(statusCode: Int)
-    case unknown(Error)
+    case decodingError(Error)
+    case encodingError(Error)
+    case serverError(Int)
+    case unknownError
     
-    var localizedDescription: String {
+    var errorDescription: String? {
         switch self {
         case .invalidURL:
-            return "Некорректный URL"
+            return "Недействительный URL"
+        case .networkError(let error):
+            return "Ошибка сети: \(error.localizedDescription)"
         case .noData:
             return "Нет данных от сервера"
-        case .decodingError:
-            return "Ошибка декодирования данных"
-        case .serverError(let statusCode):
-            return "Ошибка сервера: \(statusCode)"
-        case .unknown(let error):
-            return "Неизвестная ошибка: \(error.localizedDescription)"
+        case .decodingError(let error):
+            return "Ошибка декодирования: \(error.localizedDescription)"
+        case .encodingError(let error):
+            return "Ошибка кодирования: \(error.localizedDescription)"
+        case .serverError(let code):
+            return "Ошибка сервера: \(code)"
+        case .unknownError:
+            return "Неизвестная ошибка"
         }
     }
 }
 
-final class NetworkService {
-    
-    // MARK: - Singleton
-    static let shared = NetworkService()
-    
-    private init() {}
-    
+/// Структура для хранения данных задачи из API
+struct TodoData {
+    let id: String
+    let title: String
+    let isCompleted: Bool
+    let userId: Int32
+    let createdAt: Date
+}
+
+/// Класс, реализующий сетевые операции для работы с задачами
+final class NetworkService: NetworkServiceProtocol {
     // MARK: - Constants
-    private let baseURL = "https://dummyjson.com"
+    private enum Constants {
+        static let baseURL = "https://dummyjson.com"
+        static let maxTasksToProcess = 30
+        static let requestTimeout: TimeInterval = 30.0
+        static let resourceTimeout: TimeInterval = 60.0
+    }
     
-    // MARK: - Public Methods
+    // MARK: - Properties
+    private let session: URLSession
+    private let logger: LoggerProtocol
     
-    /// Загрузка списка задач
-    func fetchTodos(completion: @escaping (Result<[TodoModel], NetworkError>) -> Void) {
-        // Выполняем в глобальной очереди
-        DispatchQueue.global(qos: .userInitiated).async {
-            let urlString = "\(self.baseURL)/todos"
-            
-            guard let url = URL(string: urlString) else {
-                DispatchQueue.main.async {
-                    completion(.failure(.invalidURL))
-                }
-                return
-            }
-            
-            let task = URLSession.shared.dataTask(with: url) { (data, response, error) in
-                if let error = error {
-                    DispatchQueue.main.async {
-                        completion(.failure(.unknown(error)))
-                    }
-                    return
-                }
-                
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    DispatchQueue.main.async {
-                        completion(.failure(.noData))
-                    }
-                    return
-                }
-                
-                // Проверяем статус ответа
-                if !(200...299).contains(httpResponse.statusCode) {
-                    DispatchQueue.main.async {
-                        completion(.failure(.serverError(statusCode: httpResponse.statusCode)))
-                    }
-                    return
-                }
-                
-                guard let data = data else {
-                    DispatchQueue.main.async {
-                        completion(.failure(.noData))
-                    }
-                    return
-                }
-                
-                do {
-                    let decoder = JSONDecoder()
-                    let todoResponse = try decoder.decode(TodoResponseModel.self, from: data)
-                    DispatchQueue.main.async {
-                        completion(.success(todoResponse.todos))
-                    }
-                } catch {
-                    DispatchQueue.main.async {
-                        completion(.failure(.decodingError))
-                    }
-                }
-            }
-            
-            task.resume()
+    // MARK: - Initialization
+    
+    /// Инициализатор сетевого сервиса
+    /// - Parameters:
+    ///   - session: Сессия для выполнения сетевых запросов
+    ///   - logger: Логгер для записи информации о работе сервиса
+    init(session: URLSession = .shared, logger: LoggerProtocol = Logger.shared) {
+        self.session = session
+        self.logger = logger
+        
+        // Настраиваем URL сессию для оптимальной работы
+        if let sessionConfig = session.configuration as? URLSessionConfiguration {
+            sessionConfig.timeoutIntervalForRequest = Constants.requestTimeout
+            sessionConfig.timeoutIntervalForResource = Constants.resourceTimeout
         }
     }
     
-    /// Добавление задачи на сервер (для демонстрации, так как API может не поддерживать это)
-    func createTodo(title: String, completed: Bool, completion: @escaping (Result<TodoModel, NetworkError>) -> Void) {
-        DispatchQueue.global(qos: .userInitiated).async {
-            let urlString = "\(self.baseURL)/todos/add"
+    // MARK: - NetworkServiceProtocol
+    
+    /// Загружает список задач с сервера
+    /// - Parameter completion: Замыкание для обработки результата запроса
+    func fetchTodos(completion: @escaping (Result<[Task], Error>) -> Void) {
+        logger.log("Начинаем загрузку задач из API", level: .info)
+        
+        guard let url = URL(string: "\(Constants.baseURL)/todos") else {
+            let error = NetworkError.invalidURL
+            logger.log(error, level: .error)
+            completion(.failure(error))
+            return
+        }
+        
+        logger.log("Отправляем запрос к URL: \(url.absoluteString)", level: .debug)
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.addValue("application/json", forHTTPHeaderField: "Accept")
+        
+        let task = session.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
             
-            guard let url = URL(string: urlString) else {
-                DispatchQueue.main.async {
-                    completion(.failure(.invalidURL))
-                }
+            // Обработка ошибки
+            if let error = error {
+                let networkError = NetworkError.networkError(error)
+                self.logger.log(networkError, level: .error)
+                completion(.failure(networkError))
                 return
             }
             
-            var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            // Проверка кода ответа
+            if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
+                let serverError = NetworkError.serverError(httpResponse.statusCode)
+                self.logger.log(serverError, level: .error)
+                completion(.failure(serverError))
+                return
+            }
             
-            let parameters: [String: Any] = [
-                "todo": title,
-                "completed": completed,
-                "userId": 1 // Используем фиксированный userId
-            ]
+            // Проверка наличия данных
+            guard let data = data else {
+                let noDataError = NetworkError.noData
+                self.logger.log(noDataError, level: .error)
+                completion(.failure(noDataError))
+                return
+            }
+            
+            self.logger.log("Получены данные размером: \(data.count) байт", level: .debug)
+            
+            // Декодирование данных
+            do {
+                let todosResponse = try self.decodeTodosResponse(from: data)
+                self.processTodos(todosResponse.todos, completion: completion)
+            } catch {
+                let decodingError = NetworkError.decodingError(error)
+                self.logger.log(decodingError, level: .error)
+                completion(.failure(decodingError))
+            }
+        }
+        
+        task.resume()
+    }
+    
+    /// Создает новую задачу
+    /// - Parameters:
+    ///   - title: Заголовок задачи
+    ///   - completed: Статус выполнения задачи
+    ///   - completion: Замыкание для обработки результата запроса
+    func createTodo(title: String, completed: Bool, completion: @escaping (Result<Task, Error>) -> Void) {
+        // Создаем локальную заглушку успешного ответа
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            // Создаем задачу в Core Data
+            let context = CoreDataStack.shared.mainContext
+            let task = Task(context: context)
+            task.id = UUID().uuidString
+            task.title = title
+            task.isCompleted = completed
+            task.createdAt = Date()
+            task.userId = 1
+            task.taskDescription = "Локально созданная задача"
             
             do {
-                request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+                try CoreDataStack.shared.saveContext()
+                self.logger.log("Создана новая задача", level: .info)
+                completion(.success(task))
             } catch {
-                DispatchQueue.main.async {
-                    completion(.failure(.unknown(error)))
-                }
-                return
+                self.logger.log("Ошибка при создании задачи: \(error.localizedDescription)", level: .error)
+                completion(.failure(TaskError.saveFailed))
             }
-            
-            let task = URLSession.shared.dataTask(with: request) { (data, response, error) in
-                if let error = error {
-                    DispatchQueue.main.async {
-                        completion(.failure(.unknown(error)))
-                    }
-                    return
-                }
-                
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    DispatchQueue.main.async {
-                        completion(.failure(.noData))
-                    }
-                    return
-                }
-                
-                // Проверяем статус ответа
-                if !(200...299).contains(httpResponse.statusCode) {
-                    DispatchQueue.main.async {
-                        completion(.failure(.serverError(statusCode: httpResponse.statusCode)))
-                    }
-                    return
-                }
-                
-                guard let data = data else {
-                    DispatchQueue.main.async {
-                        completion(.failure(.noData))
-                    }
-                    return
-                }
-                
-                do {
-                    let decoder = JSONDecoder()
-                    let todoModel = try decoder.decode(TodoModel.self, from: data)
-                    DispatchQueue.main.async {
-                        completion(.success(todoModel))
-                    }
-                } catch {
-                    DispatchQueue.main.async {
-                        completion(.failure(.decodingError))
-                    }
-                }
-            }
-            
-            task.resume()
         }
     }
     
-    /// Обновление статуса задачи (для демонстрации)
-    func updateTodoStatus(id: Int, completed: Bool, completion: @escaping (Result<TodoModel, NetworkError>) -> Void) {
-        DispatchQueue.global(qos: .userInitiated).async {
-            let urlString = "\(self.baseURL)/todos/\(id)"
-            
-            guard let url = URL(string: urlString) else {
-                DispatchQueue.main.async {
-                    completion(.failure(.invalidURL))
-                }
+    /// Обновляет статус задачи
+    /// - Parameters:
+    ///   - id: Идентификатор задачи
+    ///   - completed: Новый статус выполнения
+    ///   - completion: Замыкание для обработки результата запроса
+    func updateTodoStatus(id: String?, completed: Bool, completion: @escaping (Result<Task, Error>) -> Void) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            guard let id = id else {
+                self.logger.log("Попытка обновить задачу с пустым идентификатором", level: .error)
+                completion(.failure(TaskError.invalidData))
                 return
             }
             
-            var request = URLRequest(url: url)
-            request.httpMethod = "PUT"
-            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-            
-            let parameters: [String: Any] = [
-                "completed": completed
-            ]
+            let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
+            fetchRequest.predicate = NSPredicate(format: "id == %@", id)
             
             do {
-                request.httpBody = try JSONSerialization.data(withJSONObject: parameters)
+                let context = CoreDataStack.shared.mainContext
+                let tasks = try context.fetch(fetchRequest)
+                
+                if let task = tasks.first {
+                    task.isCompleted = completed
+                    try CoreDataStack.shared.saveContext()
+                    self.logger.log("Обновлен статус задачи: \(id)", level: .info)
+                    completion(.success(task))
+                } else {
+                    self.logger.log("Задача не найдена: \(id)", level: .warning)
+                    completion(.failure(TaskError.taskNotFound))
+                }
             } catch {
-                DispatchQueue.main.async {
-                    completion(.failure(.unknown(error)))
-                }
-                return
+                self.logger.log("Ошибка при обновлении задачи: \(error.localizedDescription)", level: .error)
+                completion(.failure(error))
             }
-            
-            let task = URLSession.shared.dataTask(with: request) { (data, response, error) in
-                if let error = error {
-                    DispatchQueue.main.async {
-                        completion(.failure(.unknown(error)))
-                    }
-                    return
-                }
-                
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    DispatchQueue.main.async {
-                        completion(.failure(.noData))
-                    }
-                    return
-                }
-                
-                // Проверяем статус ответа
-                if !(200...299).contains(httpResponse.statusCode) {
-                    DispatchQueue.main.async {
-                        completion(.failure(.serverError(statusCode: httpResponse.statusCode)))
-                    }
-                    return
-                }
-                
-                guard let data = data else {
-                    DispatchQueue.main.async {
-                        completion(.failure(.noData))
-                    }
-                    return
-                }
-                
-                do {
-                    let decoder = JSONDecoder()
-                    let todoModel = try decoder.decode(TodoModel.self, from: data)
-                    DispatchQueue.main.async {
-                        completion(.success(todoModel))
-                    }
-                } catch {
-                    DispatchQueue.main.async {
-                        completion(.failure(.decodingError))
-                    }
-                }
-            }
-            
-            task.resume()
         }
     }
     
-    /// Удаление задачи (для демонстрации)
-    func deleteTodo(id: Int, completion: @escaping (Result<Bool, NetworkError>) -> Void) {
-        DispatchQueue.global(qos: .userInitiated).async {
-            let urlString = "\(self.baseURL)/todos/\(id)"
-            
-            guard let url = URL(string: urlString) else {
-                DispatchQueue.main.async {
-                    completion(.failure(.invalidURL))
-                }
+    /// Удаляет задачу
+    /// - Parameters:
+    ///   - id: Идентификатор задачи для удаления
+    ///   - completion: Замыкание для обработки результата запроса
+    func deleteTodo(id: String?, completion: @escaping (Result<Bool, Error>) -> Void) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            guard let id = id else {
+                self.logger.log("Попытка удалить задачу с пустым идентификатором", level: .warning)
+                completion(.success(true))
                 return
             }
             
-            var request = URLRequest(url: url)
-            request.httpMethod = "DELETE"
+            let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
+            fetchRequest.predicate = NSPredicate(format: "id == %@", id)
             
-            let task = URLSession.shared.dataTask(with: request) { (data, response, error) in
-                if let error = error {
-                    DispatchQueue.main.async {
-                        completion(.failure(.unknown(error)))
-                    }
-                    return
+            do {
+                let context = CoreDataStack.shared.mainContext
+                let tasks = try context.fetch(fetchRequest)
+                
+                if let task = tasks.first {
+                    context.delete(task)
+                    try CoreDataStack.shared.saveContext()
+                    self.logger.log("Удалена задача: \(id)", level: .info)
+                } else {
+                    self.logger.log("Задача для удаления не найдена: \(id)", level: .warning)
                 }
                 
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    DispatchQueue.main.async {
-                        completion(.failure(.noData))
-                    }
-                    return
-                }
+                completion(.success(true))
+            } catch {
+                self.logger.log("Ошибка при удалении задачи: \(error.localizedDescription)", level: .error)
+                completion(.failure(error))
+            }
+        }
+    }
+    
+    // MARK: - Private Methods
+    
+    /// Декодирует ответ сервера с задачами
+    /// - Parameter data: Данные для декодирования
+    /// - Returns: Объект с декодированными задачами
+    private func decodeTodosResponse(from data: Data) throws -> TodosResponse {
+        let decoder = JSONDecoder()
+        return try decoder.decode(TodosResponse.self, from: data)
+    }
+    
+    /// Обрабатывает загруженные задачи и сохраняет их в базу данных
+    /// - Parameters:
+    ///   - todos: Список задач из API
+    ///   - completion: Замыкание для обработки результата
+    private func processTodos(_ todos: [TaskDTO], completion: @escaping (Result<[Task], Error>) -> Void) {
+        DispatchQueue.main.async {
+            let context = CoreDataStack.shared.mainContext
+            var newTasksCount = 0
+            let existingTaskIds = self.fetchExistingTaskIds(in: context)
+            
+            // Обрабатываем задачи из API с ограничением количества
+            for networkTask in todos.prefix(Constants.maxTasksToProcess) {
+                let taskId = "\(networkTask.id)"
                 
-                // Проверяем статус ответа
-                if !(200...299).contains(httpResponse.statusCode) {
-                    DispatchQueue.main.async {
-                        completion(.failure(.serverError(statusCode: httpResponse.statusCode)))
-                    }
-                    return
-                }
+                // Пропускаем уже существующие задачи
+                if existingTaskIds.contains(taskId) { continue }
                 
-                DispatchQueue.main.async {
-                    completion(.success(true))
+                // Создаем новую задачу
+                let task = Task(context: context)
+                task.id = taskId
+                task.title = networkTask.todo
+                task.taskDescription = "Задача из API"
+                task.isCompleted = networkTask.completed
+                task.createdAt = Date()
+                task.userId = Int16(networkTask.userId)
+                
+                newTasksCount += 1
+            }
+            
+            if newTasksCount > 0 {
+                do {
+                    try CoreDataStack.shared.saveContext()
+                    self.logger.log("Добавлено \(newTasksCount) новых задач", level: .info)
+                } catch {
+                    self.logger.log("Ошибка сохранения задач: \(error.localizedDescription)", level: .error)
+                    completion(.failure(NetworkError.networkError(error)))
+                    return
                 }
             }
             
-            task.resume()
+            // Возвращаем все задачи
+            self.fetchAllTasks(completion: completion)
         }
+    }
+    
+    /// Получает идентификаторы существующих задач
+    /// - Parameter context: Контекст Core Data
+    /// - Returns: Множество идентификаторов задач
+    private func fetchExistingTaskIds(in context: NSManagedObjectContext) -> Set<String> {
+        var existingTaskIds = Set<String>()
+        let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
+        
+        do {
+            let existingTasks = try context.fetch(fetchRequest)
+            for task in existingTasks {
+                if let id = task.id {
+                    existingTaskIds.insert(id)
+                }
+            }
+            logger.log("Найдено \(existingTaskIds.count) существующих задач", level: .debug)
+        } catch {
+            logger.log("Ошибка при проверке существующих задач: \(error.localizedDescription)", level: .error)
+        }
+        
+        return existingTaskIds
+    }
+    
+    /// Получает все задачи из базы данных
+    /// - Parameter completion: Замыкание для обработки результата
+    private func fetchAllTasks(completion: @escaping (Result<[Task], Error>) -> Void) {
+        let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
+        let sortDescriptor = NSSortDescriptor(key: "createdAt", ascending: false)
+        fetchRequest.sortDescriptors = [sortDescriptor]
+        
+        do {
+            let allTasks = try CoreDataStack.shared.mainContext.fetch(fetchRequest)
+            completion(.success(allTasks))
+        } catch {
+            let fetchError = NetworkError.networkError(error)
+            logger.log(fetchError, level: .error)
+            completion(.failure(fetchError))
+        }
+    }
+}
+
+// MARK: - Data Transfer Objects
+
+/// Структура ответа API с задачами
+private struct TodosResponse: Codable {
+    let todos: [TaskDTO]
+    let total: Int
+    let skip: Int
+    let limit: Int
+}
+
+/// DTO для передачи данных задачи
+private struct TaskDTO: Codable {
+    let id: Int
+    let todo: String
+    let completed: Bool
+    let userId: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case todo
+        case completed
+        case userId
     }
 } 
