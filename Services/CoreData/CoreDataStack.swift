@@ -3,12 +3,7 @@ import CoreData
 import UIKit
 
 /// Класс для управления стеком Core Data
-final class CoreDataStack {
-    
-    // MARK: - Singleton
-    
-    /// Общий экземпляр стека Core Data
-    static let shared = CoreDataStack()
+final class CoreDataStack: CoreDataStackProtocol {
     
     // MARK: - Core Data Stack
     
@@ -89,8 +84,12 @@ final class CoreDataStack {
     
     // MARK: - Initialization
     
-    private init() {
-        setupNotificationHandling()
+    /// Инициализирует стек CoreData
+    /// - Parameter shouldSetupNotificationHandling: Нужно ли настраивать обработку системных уведомлений
+    init(shouldSetupNotificationHandling: Bool = true) {
+        if shouldSetupNotificationHandling {
+            setupNotificationHandling()
+        }
     }
     
     // MARK: - Private Methods
@@ -117,98 +116,5 @@ final class CoreDataStack {
     
     deinit {
         NotificationCenter.default.removeObserver(self)
-    }
-    
-    // MARK: - Task Operations
-    func fetchAllTasks(completion: @escaping (Result<[Task], Error>) -> Void) {
-        let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
-        
-        do {
-            // Сортировка по дате создания (от новых к старым)
-            let sortDescriptor = NSSortDescriptor(key: "createdAt", ascending: false)
-            fetchRequest.sortDescriptors = [sortDescriptor]
-            
-            // Выполняем запрос на получение задач
-            let tasks = try mainContext.fetch(fetchRequest)
-            completion(.success(tasks))
-        } catch {
-            completion(.failure(error))
-        }
-    }
-    
-    func searchTasks(with query: String, completion: @escaping (Result<[Task], Error>) -> Void) {
-        let fetchRequest: NSFetchRequest<Task> = Task.fetchRequest()
-        
-        do {
-            // Создаем предикат для поиска по заголовку или описанию
-            let titlePredicate = NSPredicate(format: "title CONTAINS[cd] %@", query)
-            let descriptionPredicate = NSPredicate(format: "taskDescription CONTAINS[cd] %@", query)
-            let compoundPredicate = NSCompoundPredicate(orPredicateWithSubpredicates: [titlePredicate, descriptionPredicate])
-            fetchRequest.predicate = compoundPredicate
-            
-            // Сортировка по дате создания (от новых к старым)
-            let sortDescriptor = NSSortDescriptor(key: "createdAt", ascending: false)
-            fetchRequest.sortDescriptors = [sortDescriptor]
-            
-            // Выполняем запрос на получение задач
-            let tasks = try mainContext.fetch(fetchRequest)
-            completion(.success(tasks))
-        } catch {
-            completion(.failure(error))
-        }
-    }
-    
-    func deleteTask(_ task: Task, completion: @escaping (Result<Bool, Error>) -> Void) {
-        do {
-            // Удаляем задачу из контекста
-            mainContext.delete(task)
-            
-            // Сохраняем контекст
-            try saveContext()
-            
-            // Возвращаем успех
-            completion(.success(true))
-        } catch {
-            completion(.failure(error))
-        }
-    }
-    
-    // MARK: - CRUD операции
-    
-    // Создание новой задачи
-    func createTask(_ task: Task) throws -> Task {
-        try saveContext()
-        return task
-    }
-    
-    // Обновление задачи
-    func updateTask(_ task: Task) throws -> Task {
-        try saveContext()
-        return task
-    }
-    
-    // Сохранение массива задач
-    func saveTasks(_ tasks: [Task]) throws {
-        try saveContext()
-    }
-}
-
-enum CoreDataError: LocalizedError {
-    case taskNotFound
-    case saveFailed(Error)
-    case fetchFailed(Error)
-    case deleteFailed(Error)
-    
-    var errorDescription: String? {
-        switch self {
-        case .taskNotFound:
-            return "Задача не найдена"
-        case .saveFailed(let error):
-            return "Ошибка сохранения: \(error.localizedDescription)"
-        case .fetchFailed(let error):
-            return "Ошибка получения данных: \(error.localizedDescription)"
-        case .deleteFailed(let error):
-            return "Ошибка удаления: \(error.localizedDescription)"
-        }
     }
 } 

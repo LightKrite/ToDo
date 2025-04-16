@@ -1,43 +1,6 @@
 import Foundation
 import CoreData
 
-/// Протокол для управления данными задач
-protocol DataManagerProtocol {
-    /// Загружает начальный список задач
-    /// - Parameter completion: Замыкание с результатом операции
-    func fetchInitialTasks(completion: @escaping (Result<[Task], Error>) -> Void)
-    
-    /// Создает новую задачу
-    /// - Parameters:
-    ///   - title: Заголовок задачи
-    ///   - description: Описание задачи
-    ///   - isCompleted: Статус выполнения задачи
-    ///   - completion: Замыкание с результатом операции
-    func createTask(title: String, description: String, isCompleted: Bool, completion: @escaping (Result<Task, Error>) -> Void)
-    
-    /// Получает список всех задач
-    /// - Parameter completion: Замыкание с результатом операции
-    func fetchAllTasks(completion: @escaping (Result<[Task], Error>) -> Void)
-    
-    /// Выполняет поиск задач по запросу
-    /// - Parameters:
-    ///   - query: Поисковый запрос
-    ///   - completion: Замыкание с результатом операции
-    func searchTasks(with query: String, completion: @escaping (Result<[Task], Error>) -> Void)
-    
-    /// Обновляет существующую задачу
-    /// - Parameters:
-    ///   - task: Задача для обновления
-    ///   - completion: Замыкание с результатом операции
-    func updateTask(_ task: Task, completion: @escaping (Result<Task, Error>) -> Void)
-    
-    /// Удаляет задачу
-    /// - Parameters:
-    ///   - task: Задача для удаления
-    ///   - completion: Замыкание с результатом операции
-    func deleteTask(_ task: Task, completion: @escaping (Result<Bool, Error>) -> Void)
-}
-
 /// Класс для управления данными задач
 final class DataManager: DataManagerProtocol {
     // MARK: - Constants
@@ -46,14 +9,9 @@ final class DataManager: DataManagerProtocol {
         static let defaultUserId: Int16 = 1
     }
     
-    // MARK: - Singleton
-    
-    /// Общий экземпляр менеджера данных
-    static let shared = DataManager()
-    
     // MARK: - Dependencies
     
-    private let coreDataStack: CoreDataStack
+    private let coreDataStack: CoreDataStackProtocol
     private let networkService: NetworkServiceProtocol
     private let logger: LoggerProtocol
     
@@ -64,12 +22,23 @@ final class DataManager: DataManagerProtocol {
     ///   - coreDataStack: Стек Core Data для работы с локальными данными
     ///   - networkService: Сервис для работы с сетевыми данными
     ///   - logger: Сервис для логирования
-    private init(coreDataStack: CoreDataStack = CoreDataStack.shared,
-                networkService: NetworkServiceProtocol = NetworkService(),
-                logger: LoggerProtocol = Logger.shared) {
+    init(coreDataStack: CoreDataStackProtocol,
+         networkService: NetworkServiceProtocol,
+         logger: LoggerProtocol) {
         self.coreDataStack = coreDataStack
         self.networkService = networkService
         self.logger = logger
+    }
+    
+    /// Статический метод для создания экземпляра с зависимостями по умолчанию
+    static func createDefault(coreDataStack: CoreDataStackProtocol,
+                             networkService: NetworkServiceProtocol = NetworkService(),
+                             logger: LoggerProtocol = Logger.shared) -> DataManager {
+        return DataManager(
+            coreDataStack: coreDataStack,
+            networkService: networkService,
+            logger: logger
+        )
     }
     
     // MARK: - DataManagerProtocol
@@ -235,6 +204,12 @@ final class DataManager: DataManagerProtocol {
         }
     }
     
+    /// Сохраняет все изменения в основном контексте
+    /// - Throws: Ошибку, если сохранение не удалось
+    func saveContext() throws {
+        try coreDataStack.saveContext()
+    }
+    
     // MARK: - Private Methods
     
     /// Создает новую задачу в локальной базе данных
@@ -262,11 +237,25 @@ final class DataManager: DataManagerProtocol {
     ///   - isCompleted: Статус выполнения
     private func syncTaskWithServer(_ task: Task, title: String, isCompleted: Bool) {
         networkService.createTodo(title: title, completed: isCompleted) { [weak self] result in
+            guard let self = self else { return }
+            
             switch result {
-            case .success:
-                self?.logger.log("Задача успешно синхронизирована с сервером", level: .info)
+            case .success(let networkTask):
+                // Сервер успешно создал задачу, обновляем локальный идентификатор, если нужно
+                if let networkId = networkTask.id, networkId != task.id {
+                    DispatchQueue.main.async {
+                        task.id = networkId
+                        do {
+                            try self.coreDataStack.saveContext()
+                            self.logger.log("Задача синхронизирована с сервером, ID: \(networkId)", level: .info)
+                        } catch {
+                            self.logger.log("Ошибка при обновлении ID задачи: \(error.localizedDescription)", level: .error)
+                        }
+                    }
+                }
+                
             case .failure(let error):
-                self?.logger.log("Ошибка синхронизации с сервером: \(error.localizedDescription)", level: .warning)
+                self.logger.log("Ошибка синхронизации задачи с сервером: \(error.localizedDescription)", level: .warning)
             }
         }
     }

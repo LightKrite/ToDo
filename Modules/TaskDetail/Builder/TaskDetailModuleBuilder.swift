@@ -15,8 +15,18 @@ final class TaskDetailModuleBuilder: TaskDetailModuleBuilderInterface {
             return emptyVC
         }
         
+        // Создаем зависимости
+        let coreDataStack = CoreDataStack()
+        let logger = Logger.shared
+        let networkService = NetworkService(coreDataStack: coreDataStack)
+        let dataManager = DataManager(
+            coreDataStack: coreDataStack,
+            networkService: networkService,
+            logger: logger
+        )
+        
         let viewController = TaskDetailViewController()
-        let interactor = TaskDetailInteractor(task: task)
+        let interactor = TaskDetailInteractor(task: task, dataManager: dataManager)
         let presenter = TaskDetailPresenter(task: task)
         let router = TaskDetailRouter(viewController: viewController)
         
