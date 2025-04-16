@@ -42,33 +42,24 @@ struct TodoData {
 
 /// Класс, реализующий сетевые операции для работы с задачами
 final class NetworkService: NetworkServiceProtocol {
-    // MARK: - Constants
-    private enum Constants {
-        static let baseURL = "https://dummyjson.com"
-        static let maxTasksToProcess = 30
-        static let requestTimeout: TimeInterval = 30.0
-        static let resourceTimeout: TimeInterval = 60.0
-    }
+    // MARK: - Dependencies
     
-    // MARK: - Properties
-    private let session: URLSession
+    private let coreDataStack: CoreDataStackProtocol
     private let logger: LoggerProtocol
+    
+    // MARK: - Constants
+    
+    private enum Constants {
+        static let baseURL = "https://dummyjson.com/todos"
+        static let maxTasksToProcess = 20
+        static let requestTimeout: TimeInterval = 15
+    }
     
     // MARK: - Initialization
     
-    /// Инициализатор сетевого сервиса
-    /// - Parameters:
-    ///   - session: Сессия для выполнения сетевых запросов
-    ///   - logger: Логгер для записи информации о работе сервиса
-    init(session: URLSession = .shared, logger: LoggerProtocol = Logger.shared) {
-        self.session = session
+    init(coreDataStack: CoreDataStackProtocol, logger: LoggerProtocol = Logger.shared) {
+        self.coreDataStack = coreDataStack
         self.logger = logger
-        
-        // Настраиваем URL сессию для оптимальной работы
-        if let sessionConfig = session.configuration as? URLSessionConfiguration {
-            sessionConfig.timeoutIntervalForRequest = Constants.requestTimeout
-            sessionConfig.timeoutIntervalForResource = Constants.resourceTimeout
-        }
     }
     
     // MARK: - NetworkServiceProtocol
@@ -78,7 +69,7 @@ final class NetworkService: NetworkServiceProtocol {
     func fetchTodos(completion: @escaping (Result<[Task], Error>) -> Void) {
         logger.log("Начинаем загрузку задач из API", level: .info)
         
-        guard let url = URL(string: "\(Constants.baseURL)/todos") else {
+        guard let url = URL(string: "\(Constants.baseURL)") else {
             let error = NetworkError.invalidURL
             logger.log(error, level: .error)
             completion(.failure(error))
@@ -91,7 +82,7 @@ final class NetworkService: NetworkServiceProtocol {
         request.httpMethod = "GET"
         request.addValue("application/json", forHTTPHeaderField: "Accept")
         
-        let task = session.dataTask(with: request) { [weak self] data, response, error in
+        let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
             
             // Обработка ошибки
@@ -143,7 +134,7 @@ final class NetworkService: NetworkServiceProtocol {
         // Создаем локальную заглушку успешного ответа
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             // Создаем задачу в Core Data
-            let context = CoreDataStack.shared.mainContext
+            let context = self.coreDataStack.mainContext
             let task = Task(context: context)
             task.id = UUID().uuidString
             task.title = title
@@ -153,7 +144,7 @@ final class NetworkService: NetworkServiceProtocol {
             task.taskDescription = "Локально созданная задача"
             
             do {
-                try CoreDataStack.shared.saveContext()
+                try self.coreDataStack.saveContext()
                 self.logger.log("Создана новая задача", level: .info)
                 completion(.success(task))
             } catch {
@@ -180,12 +171,12 @@ final class NetworkService: NetworkServiceProtocol {
             fetchRequest.predicate = NSPredicate(format: "id == %@", id)
             
             do {
-                let context = CoreDataStack.shared.mainContext
+                let context = self.coreDataStack.mainContext
                 let tasks = try context.fetch(fetchRequest)
                 
                 if let task = tasks.first {
                     task.isCompleted = completed
-                    try CoreDataStack.shared.saveContext()
+                    try self.coreDataStack.saveContext()
                     self.logger.log("Обновлен статус задачи: \(id)", level: .info)
                     completion(.success(task))
                 } else {
@@ -215,12 +206,12 @@ final class NetworkService: NetworkServiceProtocol {
             fetchRequest.predicate = NSPredicate(format: "id == %@", id)
             
             do {
-                let context = CoreDataStack.shared.mainContext
+                let context = self.coreDataStack.mainContext
                 let tasks = try context.fetch(fetchRequest)
                 
                 if let task = tasks.first {
                     context.delete(task)
-                    try CoreDataStack.shared.saveContext()
+                    try self.coreDataStack.saveContext()
                     self.logger.log("Удалена задача: \(id)", level: .info)
                 } else {
                     self.logger.log("Задача для удаления не найдена: \(id)", level: .warning)
@@ -250,7 +241,7 @@ final class NetworkService: NetworkServiceProtocol {
     ///   - completion: Замыкание для обработки результата
     private func processTodos(_ todos: [TaskDTO], completion: @escaping (Result<[Task], Error>) -> Void) {
         DispatchQueue.main.async {
-            let context = CoreDataStack.shared.mainContext
+            let context = self.coreDataStack.mainContext
             var newTasksCount = 0
             let existingTaskIds = self.fetchExistingTaskIds(in: context)
             
@@ -275,7 +266,7 @@ final class NetworkService: NetworkServiceProtocol {
             
             if newTasksCount > 0 {
                 do {
-                    try CoreDataStack.shared.saveContext()
+                    try self.coreDataStack.saveContext()
                     self.logger.log("Добавлено \(newTasksCount) новых задач", level: .info)
                 } catch {
                     self.logger.log("Ошибка сохранения задач: \(error.localizedDescription)", level: .error)
@@ -319,7 +310,7 @@ final class NetworkService: NetworkServiceProtocol {
         fetchRequest.sortDescriptors = [sortDescriptor]
         
         do {
-            let allTasks = try CoreDataStack.shared.mainContext.fetch(fetchRequest)
+            let allTasks = try self.coreDataStack.mainContext.fetch(fetchRequest)
             completion(.success(allTasks))
         } catch {
             let fetchError = NetworkError.networkError(error)

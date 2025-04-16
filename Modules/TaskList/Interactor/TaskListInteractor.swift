@@ -9,8 +9,7 @@ final class TaskListInteractor: TaskListInteractorInterface {
     private let logger: LoggerProtocol
     
     // MARK: - Initialization
-    init(dataManager: DataManagerProtocol = DataManager.shared,
-         logger: LoggerProtocol = Logger.shared) {
+    init(dataManager: DataManagerProtocol, logger: LoggerProtocol) {
         self.dataManager = dataManager
         self.logger = logger
     }

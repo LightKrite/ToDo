@@ -55,9 +55,19 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Use this method to save data, release shared resources, and store enough scene-specific state information
         // to restore the scene back to its current state.
         
+        // Получаем CoreDataStack из корневого контроллера
+        guard let navigationController = window?.rootViewController as? UINavigationController,
+              let taskListVC = navigationController.viewControllers.first as? TaskListViewController,
+              let presenter = taskListVC.taskListPresenter,
+              let interactor = presenter.interactor,
+              let dataManager = interactor.dataManager as? DataManager else {
+            print("Не удалось получить доступ к CoreDataStack")
+            return
+        }
+        
         // Сохраняем контекст Core Data при уходе в фон
         do {
-            try CoreDataStack.shared.saveContext()
+            try dataManager.saveContext()
         } catch {
             print("Ошибка при сохранении контекста CoreData: \(error.localizedDescription)")
         }

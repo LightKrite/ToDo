@@ -36,6 +36,10 @@ protocol DataManagerProtocol {
     ///   - task: Задача для удаления
     ///   - completion: Замыкание с результатом операции
     func deleteTask(_ task: Task, completion: @escaping (Result<Bool, Error>) -> Void)
+
+    /// Сохраняет все изменения в основном контексте
+    /// - Throws: Ошибку, если сохранение не удалось
+    func saveContext() throws
 }
 
 /// Класс для управления данными задач
@@ -46,14 +50,9 @@ final class DataManager: DataManagerProtocol {
         static let defaultUserId: Int16 = 1
     }
     
-    // MARK: - Singleton
-    
-    /// Общий экземпляр менеджера данных
-    static let shared = DataManager()
-    
     // MARK: - Dependencies
     
-    private let coreDataStack: CoreDataStack
+    private let coreDataStack: CoreDataStackProtocol
     private let networkService: NetworkServiceProtocol
     private let logger: LoggerProtocol
     
@@ -64,12 +63,23 @@ final class DataManager: DataManagerProtocol {
     ///   - coreDataStack: Стек Core Data для работы с локальными данными
     ///   - networkService: Сервис для работы с сетевыми данными
     ///   - logger: Сервис для логирования
-    private init(coreDataStack: CoreDataStack = CoreDataStack.shared,
-                networkService: NetworkServiceProtocol = NetworkService(),
-                logger: LoggerProtocol = Logger.shared) {
+    init(coreDataStack: CoreDataStackProtocol,
+         networkService: NetworkServiceProtocol,
+         logger: LoggerProtocol) {
         self.coreDataStack = coreDataStack
         self.networkService = networkService
         self.logger = logger
+    }
+    
+    /// Статический метод для создания экземпляра с зависимостями по умолчанию
+    static func createDefault(coreDataStack: CoreDataStackProtocol,
+                             networkService: NetworkServiceProtocol = NetworkService(),
+                             logger: LoggerProtocol = Logger.shared) -> DataManager {
+        return DataManager(
+            coreDataStack: coreDataStack,
+            networkService: networkService,
+            logger: logger
+        )
     }
     
     // MARK: - DataManagerProtocol
@@ -233,6 +243,12 @@ final class DataManager: DataManagerProtocol {
                 completion(.failure(error))
             }
         }
+    }
+    
+    /// Сохраняет все изменения в основном контексте
+    /// - Throws: Ошибку, если сохранение не удалось
+    func saveContext() throws {
+        try coreDataStack.saveContext()
     }
     
     // MARK: - Private Methods

@@ -2,13 +2,26 @@ import Foundation
 import CoreData
 import UIKit
 
+/// Протокол для работы со стеком CoreData
+protocol CoreDataStackProtocol {
+    /// Контекст для выполнения операций в главном потоке
+    var mainContext: NSManagedObjectContext { get }
+    
+    /// Создает контекст для выполнения фоновых операций
+    func newBackgroundContext() -> NSManagedObjectContext
+    
+    /// Сохраняет изменения в контексте Core Data
+    /// - Throws: Ошибку, если сохранение не удалось
+    func saveContext() throws
+    
+    /// Сохраняет изменения в указанном контексте
+    /// - Parameter context: Контекст, в котором нужно сохранить изменения
+    /// - Throws: Ошибку, если сохранение не удалось
+    func save(context: NSManagedObjectContext) throws
+}
+
 /// Класс для управления стеком Core Data
-final class CoreDataStack {
-    
-    // MARK: - Singleton
-    
-    /// Общий экземпляр стека Core Data
-    static let shared = CoreDataStack()
+final class CoreDataStack: CoreDataStackProtocol {
     
     // MARK: - Core Data Stack
     
@@ -89,8 +102,12 @@ final class CoreDataStack {
     
     // MARK: - Initialization
     
-    private init() {
-        setupNotificationHandling()
+    /// Инициализирует стек CoreData
+    /// - Parameter shouldSetupNotificationHandling: Нужно ли настраивать обработку системных уведомлений
+    init(shouldSetupNotificationHandling: Bool = true) {
+        if shouldSetupNotificationHandling {
+            setupNotificationHandling()
+        }
     }
     
     // MARK: - Private Methods
@@ -193,6 +210,7 @@ final class CoreDataStack {
     }
 }
 
+/// Ошибки, связанные с работой Core Data
 enum CoreDataError: LocalizedError {
     case taskNotFound
     case saveFailed(Error)

@@ -1,10 +1,23 @@
 import UIKit
 
 final class TaskListModuleBuilder: ModuleBuilderInterface {
-    static func build(with parameters: [String: Any]) -> UIViewController {
+    static func build(with parameters: [String: Any] = [:]) -> UIViewController {
+        // Создаем зависимости
+        let coreDataStack = CoreDataStack()
+        let logger = Logger.shared
+        let networkService = NetworkService()
+        let dataManager = DataManager(
+            coreDataStack: coreDataStack,
+            networkService: networkService,
+            logger: logger
+        )
+        
         // Создание компонентов VIPER
         let view = TaskListViewController()
-        let interactor = TaskListInteractor()
+        let interactor = TaskListInteractor(
+            dataManager: dataManager,
+            logger: logger
+        )
         let router = TaskListRouter()
         let presenter = TaskListPresenter()
         
