@@ -1,11 +1,6 @@
 import Foundation
 
-protocol LoggerProtocol {
-    func log(_ message: String, level: LogLevel)
-    func log(_ error: Error, level: LogLevel)
-    func dump(_ object: Any, message: String, level: LogLevel)
-}
-
+/// Уровни логирования
 enum LogLevel {
     case debug
     case info
@@ -22,27 +17,41 @@ enum LogLevel {
     }
 }
 
+/// Протокол для логирования сообщений
+protocol LoggerProtocol {
+    func log(_ message: String, level: LogLevel)
+    func log(_ error: Error, level: LogLevel)
+    func dump(_ object: Any, message: String, level: LogLevel)
+}
+
+/// Стандартная реализация логгера
 final class Logger: LoggerProtocol {
+    // Для обратной совместимости сохраняем shared, но это будет deprecated
     static let shared = Logger()
     
-    private init() {}
+    /// Формат даты для логов
+    private let dateFormatter: DateFormatter
     
-    private var dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
-        return formatter
-    }()
+    /// Создаёт экземпляр логгера с настраиваемым форматом даты
+    /// - Parameter dateFormat: Формат вывода даты в логах
+    init(dateFormat: String = "yyyy-MM-dd HH:mm:ss.SSS") {
+        self.dateFormatter = DateFormatter()
+        self.dateFormatter.dateFormat = dateFormat
+    }
     
+    /// Возвращает текущую временную метку
     private func timestamp() -> String {
         return dateFormatter.string(from: Date())
     }
     
+    /// Логирует текстовое сообщение с указанным уровнем
     func log(_ message: String, level: LogLevel) {
         #if DEBUG
         print("[\(timestamp())] [\(level.prefix)] \(message)")
         #endif
     }
     
+    /// Логирует ошибку с указанным уровнем
     func log(_ error: Error, level: LogLevel) {
         #if DEBUG
         print("[\(timestamp())] [\(level.prefix)] \(error.localizedDescription)")
@@ -52,6 +61,7 @@ final class Logger: LoggerProtocol {
         #endif
     }
     
+    /// Логирует объект с текстовым сообщением и указанным уровнем
     func dump(_ object: Any, message: String, level: LogLevel) {
         #if DEBUG
         print("[\(timestamp())] [\(level.prefix)] \(message)")

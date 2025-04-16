@@ -4,8 +4,8 @@ final class TaskListModuleBuilder: ModuleBuilderInterface {
     static func build(with parameters: [String: Any] = [:]) -> UIViewController {
         // Создаем зависимости
         let coreDataStack = CoreDataStack()
-        let logger = Logger.shared
-        let networkService = NetworkService(coreDataStack: coreDataStack)
+        let logger = Logger()
+        let networkService = NetworkService(coreDataStack: coreDataStack, logger: logger)
         let dataManager = DataManager(
             coreDataStack: coreDataStack,
             networkService: networkService,

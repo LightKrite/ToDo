@@ -3,6 +3,7 @@ import UIKit
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
+    private var dataManager: DataManagerProtocol?
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         // Use this method to optionally configure and attach the UIWindow `window` to the provided UIWindowScene `scene`.
@@ -15,6 +16,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
         // Создаем корневой контроллер с помощью модульного билдера TaskList
         let taskListViewController = TaskListModuleBuilder.build()
+        
+        // Сохраняем ссылку на dataManager для сохранения данных при завершении
+        if let presenter = (taskListViewController as? TaskListViewController)?.taskListPresenter,
+           let interactor = presenter.interactor {
+            self.dataManager = interactor.dataManager
+        }
         
         // Оборачиваем в навигационный контроллер
         let navigationController = UINavigationController(rootViewController: taskListViewController)
@@ -57,7 +64,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
         // Сохраняем контекст Core Data при уходе в фон
         do {
-            try CoreDataStack.shared.saveContext()
+            try dataManager?.saveContext()
         } catch {
             print("Ошибка при сохранении контекста CoreData: \(error.localizedDescription)")
         }

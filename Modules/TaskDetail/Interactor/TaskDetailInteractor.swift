@@ -13,8 +13,8 @@ final class TaskDetailInteractor: TaskDetailInteractorInterface {
     
     // MARK: - Initialization
     init(task: Task,
-         dataManager: DataManagerProtocol = DataManager.shared,
-         logger: LoggerProtocol = Logger.shared) {
+         dataManager: DataManagerProtocol,
+         logger: LoggerProtocol) {
         self.task = task
         self.dataManager = dataManager
         self.logger = logger

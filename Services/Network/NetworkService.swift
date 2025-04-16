@@ -18,7 +18,7 @@ final class NetworkService: NetworkServiceProtocol {
     
     // MARK: - Initialization
     
-    init(coreDataStack: CoreDataStackProtocol, logger: LoggerProtocol = Logger.shared) {
+    init(coreDataStack: CoreDataStackProtocol, logger: LoggerProtocol) {
         self.coreDataStack = coreDataStack
         self.logger = logger
     }
