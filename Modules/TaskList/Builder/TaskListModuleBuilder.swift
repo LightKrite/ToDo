@@ -5,7 +5,7 @@ final class TaskListModuleBuilder: ModuleBuilderInterface {
         // Создаем зависимости
         let coreDataStack = CoreDataStack()
         let logger = Logger.shared
-        let networkService = NetworkService()
+        let networkService = NetworkService(coreDataStack: coreDataStack)
         let dataManager = DataManager(
             coreDataStack: coreDataStack,
             networkService: networkService,

@@ -73,7 +73,7 @@ final class DataManager: DataManagerProtocol {
     
     /// Статический метод для создания экземпляра с зависимостями по умолчанию
     static func createDefault(coreDataStack: CoreDataStackProtocol,
-                             networkService: NetworkServiceProtocol = NetworkService(),
+                             networkService: NetworkServiceProtocol = NetworkService(coreDataStack: coreDataStack),
                              logger: LoggerProtocol = Logger.shared) -> DataManager {
         return DataManager(
             coreDataStack: coreDataStack,
